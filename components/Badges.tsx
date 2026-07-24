@@ -1,0 +1,5 @@
+import { CaseStatus, JudgmentLevel } from "@/lib/types";
+const levelColors: Record<JudgmentLevel, string> = { "問題なし": "bg-emerald-100 text-emerald-800", "経過確認": "bg-sky-100 text-sky-800", "要確認": "bg-amber-100 text-amber-800", "要是正": "bg-orange-100 text-orange-800", "作業一時停止": "bg-red-100 text-red-800", "即時対応": "bg-rose-100 text-rose-800", "上位者・設計者への確認が必要": "bg-violet-100 text-violet-800" };
+const statusColors: Record<CaseStatus, string> = { "下書き": "bg-slate-100 text-slate-700", "確認中": "bg-sky-100 text-sky-800", "承認済み": "bg-emerald-100 text-emerald-800", "保留": "bg-amber-100 text-amber-800", "廃止": "bg-slate-200 text-slate-600" };
+export function LevelBadge({ level }: { level: JudgmentLevel }) { return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${levelColors[level]}`}>{level}</span>; }
+export function StatusBadge({ status }: { status: CaseStatus }) { return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusColors[status]}`}>{status}</span>; }
