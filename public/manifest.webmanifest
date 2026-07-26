@@ -1,0 +1,13 @@
+{
+  "name": "現場判断ログ",
+  "short_name": "現場判断ログ",
+  "description": "電気工事の施工管理判断を記録・蓄積するアプリ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f8",
+  "theme_color": "#163047",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
