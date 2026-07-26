@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "現場判断ログ",
   description: "電気工事の施工管理判断を記録・蓄積するアプリ",
   manifest: `${publicPath}/manifest.webmanifest`,
-  icons: { icon: `${publicPath}/icon.svg`, apple: `${publicPath}/apple-touch-icon.png` },
+  icons: { icon: `${publicPath}/icon.svg?v=2`, apple: `${publicPath}/apple-touch-icon.png?v=2` },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "現場判断ログ" },
 };
 
