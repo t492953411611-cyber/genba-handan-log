@@ -8,7 +8,9 @@ import { Header } from "@/components/denkou/Header";
 import { MyPage } from "@/components/denkou/MyPage";
 import { NewPostModal } from "@/components/denkou/NewPostModal";
 import { PostCard } from "@/components/denkou/PostCard";
+import { ConsentGate } from "@/components/denkou/ConsentGate";
 import { PostDetailModal } from "@/components/denkou/PostDetailModal";
+import { SearchBar } from "@/components/denkou/SearchBar";
 import { useDenkouStore, type NewPostInput } from "@/lib/denkou/store";
 import { CATEGORY_MAP, type CategoryId, type Post } from "@/lib/denkou/types";
 
@@ -20,6 +22,8 @@ export default function DenkouConnectPage() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [solvedOnly, setSolvedOnly] = useState(false);
   const scrollRef = useRef<HTMLElement>(null);
 
   const { posts, notifications, ready } = store;
@@ -30,13 +34,21 @@ export default function DenkouConnectPage() {
     return base;
   }, [posts]);
 
-  const timeline = useMemo(
-    () =>
-      posts
-        .filter((p) => p.category === category)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [posts, category],
-  );
+  const timeline = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return posts
+      .filter((p) => p.category === category)
+      .filter((p) => (solvedOnly ? p.status === "solved" : true))
+      .filter((p) => {
+        if (!q) return true;
+        // 本文と現場名に加えてコメントも見る。解決した答えは本文でなくコメント側にあるため。
+        const haystack = [p.title, p.body, p.site ?? "", ...p.comments.map((c) => c.body)]
+          .join("\n")
+          .toLowerCase();
+        return haystack.includes(q);
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [posts, category, query, solvedOnly]);
 
   const savedPosts = useMemo(
     () => posts.filter((p) => p.saved).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -121,7 +133,16 @@ export default function DenkouConnectPage() {
         />
 
         {tab === "timeline" && (
-          <CategoryTabs active={category} counts={counts} onSelect={setCategory} />
+          <>
+            <CategoryTabs active={category} counts={counts} onSelect={setCategory} />
+            <SearchBar
+              query={query}
+              solvedOnly={solvedOnly}
+              resultCount={timeline.length}
+              onQueryChange={setQuery}
+              onSolvedOnlyChange={setSolvedOnly}
+            />
+          </>
         )}
 
         <main ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -133,7 +154,11 @@ export default function DenkouConnectPage() {
           ) : tab === "timeline" ? (
             <Feed
               posts={timeline}
-              emptyText={`「${CATEGORY_MAP[category].label}」の投稿はまだありません。`}
+              emptyText={
+                query.trim() || solvedOnly
+                  ? "条件に一致する投稿がありませんでした。検索語を変えるか、絞り込みを外してみてください。"
+                  : `「${CATEGORY_MAP[category].label}」の投稿はまだありません。`
+              }
               onOpen={openDetail}
               onLike={store.toggleLike}
               onSave={store.toggleSave}
@@ -199,6 +224,8 @@ export default function DenkouConnectPage() {
             setToast("コメントを投稿しました");
           }}
         />
+
+        <ConsentGate />
 
         {toast && (
           <div className="pointer-events-none absolute inset-x-0 bottom-24 z-50 flex justify-center px-6">
