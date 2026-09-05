@@ -90,9 +90,17 @@ export default function DenkouConnectPage() {
       const before = posts.find((p) => p.id === postId);
       const wasSolution = before?.comments.find((c) => c.id === commentId)?.isSolution;
       store.markSolution(postId, commentId);
-      setToast(wasSolution ? "解決の選択を取り消しました" : "「これで解決！」に設定しました");
+      setToast(wasSolution ? "解決報告を取り消しました" : "「この方法で直りました」として報告しました");
     },
     [posts, store],
+  );
+
+  const handleReportDanger = useCallback(
+    (postId: string, commentId?: string) => {
+      store.reportDanger(postId, commentId);
+      setToast("報告しました（試作版のためこの端末内にのみ記録されます）");
+    },
+    [store],
   );
 
   const handleToggleNotif = useCallback(() => {
@@ -185,6 +193,7 @@ export default function DenkouConnectPage() {
           onSave={store.toggleSave}
           onCommentLike={store.toggleCommentLike}
           onMarkSolution={handleMarkSolution}
+          onReportDanger={handleReportDanger}
           onAddComment={(input) => {
             store.addComment(input);
             setToast("コメントを投稿しました");

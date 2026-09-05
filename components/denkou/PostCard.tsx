@@ -1,7 +1,14 @@
 "use client";
 
 import { Bookmark, HardHat, MapPin, MessageSquare, ThumbsUp } from "lucide-react";
-import { AnonymousBadge, CategoryBadge, StatusBadge, UrgentBadge } from "./Badges";
+import {
+  AnonymousBadge,
+  CategoryBadge,
+  FlaggedBadge,
+  SafetyCheckList,
+  StatusBadge,
+  UrgentBadge,
+} from "./Badges";
 import { timeAgo } from "@/lib/denkou/store";
 import { CURRENT_USER, displayName, displayTitle, type Post } from "@/lib/denkou/types";
 
@@ -65,6 +72,7 @@ export function PostCard({ post, onOpen, onLike, onSave }: Props) {
           {post.urgent && !solved && <UrgentBadge />}
           <CategoryBadge id={post.category} />
           <StatusBadge status={post.status} />
+          {post.flagged && <FlaggedBadge />}
         </div>
 
         <h2 className="mt-2 text-[15px] font-bold leading-snug text-slate-900">{post.title}</h2>
@@ -72,6 +80,8 @@ export function PostCard({ post, onOpen, onLike, onSave }: Props) {
         <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-slate-700">
           {post.body}
         </p>
+
+        <SafetyCheckList checks={post.checks} />
 
         {post.site && (
           <p className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-slate-500">
