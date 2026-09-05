@@ -27,6 +27,7 @@ function comment(c: Partial<SeedComment> & Pick<SeedComment, "id" | "body" | "cr
     likes: 0,
     likedByMe: false,
     isSolution: false,
+    flagged: false,
     ...c,
   };
 }
@@ -63,6 +64,8 @@ export function buildInitialPosts(): Post[] {
       likes: 12,
       likedByMe: false,
       saved: false,
+      checks: ["voltage", "phase", "drawing"],
+      flagged: false,
       comments: [
         comment({
           id: "p1c1",
@@ -119,6 +122,8 @@ export function buildInitialPosts(): Post[] {
       likes: 128,
       likedByMe: true,
       saved: true,
+      checks: [],
+      flagged: false,
       comments: [
         comment({
           id: "p2c1",
@@ -168,6 +173,8 @@ export function buildInitialPosts(): Post[] {
       likes: 64,
       likedByMe: false,
       saved: false,
+      checks: ["earth", "drawing"],
+      flagged: false,
       comments: [
         comment({
           id: "p3c1",
@@ -232,6 +239,8 @@ export function buildInitialPosts(): Post[] {
       likes: 203,
       likedByMe: false,
       saved: true,
+      checks: [],
+      flagged: false,
       comments: [
         comment({
           id: "p4c1",
@@ -274,6 +283,8 @@ export function buildInitialPosts(): Post[] {
       likes: 87,
       likedByMe: false,
       saved: false,
+      checks: ["power-off", "voltage", "insulation"],
+      flagged: false,
       comments: [
         comment({
           id: "p5c1",
@@ -320,6 +331,8 @@ export function buildInitialPosts(): Post[] {
       likes: 96,
       likedByMe: false,
       saved: false,
+      checks: [],
+      flagged: false,
       comments: [
         comment({
           id: "p6c1",
@@ -356,6 +369,8 @@ export function buildInitialPosts(): Post[] {
       likes: 71,
       likedByMe: false,
       saved: false,
+      checks: [],
+      flagged: false,
       comments: [
         comment({
           id: "p7c1",
@@ -393,6 +408,8 @@ export function buildInitialPosts(): Post[] {
       likes: 142,
       likedByMe: false,
       saved: false,
+      checks: [],
+      flagged: false,
       comments: [
         comment({
           id: "p8c1",

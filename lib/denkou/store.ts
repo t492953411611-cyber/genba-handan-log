@@ -2,10 +2,31 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildInitialNotifications, buildInitialPosts, type NotificationItem } from "./mock";
-import { CURRENT_USER, type CategoryId, type Comment, type Post } from "./types";
+import {
+  CURRENT_USER,
+  type CategoryId,
+  type Comment,
+  type Post,
+  type SafetyCheckId,
+} from "./types";
 
 const POSTS_KEY = "denkou-connect:posts:v1";
 const NOTIF_KEY = "denkou-connect:notifications:v1";
+
+/** 旧バージョンで保存されたデータに、後から足したフィールドを補う */
+function normalizePosts(raw: unknown[]): Post[] {
+  return raw.map((item) => {
+    const p = item as Post;
+    return {
+      ...p,
+      checks: Array.isArray(p.checks) ? p.checks : [],
+      flagged: p.flagged === true,
+      comments: Array.isArray(p.comments)
+        ? p.comments.map((c) => ({ ...c, flagged: c.flagged === true }))
+        : [],
+    };
+  });
+}
 
 function readJson<T>(key: string, fallback: () => T): T {
   if (typeof window === "undefined") return fallback();
@@ -36,6 +57,7 @@ export type NewPostInput = {
   urgent: boolean;
   photo?: string;
   site?: string;
+  checks: SafetyCheckId[];
 };
 
 export type NewCommentInput = {
@@ -53,7 +75,7 @@ export function useDenkouStore() {
 
   // 初回マウント時にだけ LocalStorage を読む（SSR とのミスマッチを避ける）
   useEffect(() => {
-    setPosts(readJson<Post[]>(POSTS_KEY, buildInitialPosts));
+    setPosts(normalizePosts(readJson<Post[]>(POSTS_KEY, buildInitialPosts)));
     setNotifications(readJson<NotificationItem[]>(NOTIF_KEY, buildInitialNotifications));
     hydrated.current = true;
     setReady(true);
@@ -87,6 +109,8 @@ export function useDenkouStore() {
       likes: 0,
       likedByMe: false,
       saved: false,
+      checks: input.checks,
+      flagged: false,
       comments: [],
     };
     setPosts((prev) => [post, ...prev]);
@@ -107,6 +131,7 @@ export function useDenkouStore() {
       likes: 0,
       likedByMe: false,
       isSolution: false,
+      flagged: false,
     };
     setPosts((prev) =>
       prev.map((p) => (p.id === input.postId ? { ...p, comments: [...p.comments, comment] } : p)),
@@ -163,6 +188,23 @@ export function useDenkouStore() {
     );
   }, []);
 
+  /**
+   * 危険な内容として報告する。
+   * 試作版なので送信先は無く、この端末内で「確認中」の印が付くだけ。
+   */
+  const reportDanger = useCallback((postId: string, commentId?: string) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        if (!commentId) return { ...p, flagged: true };
+        return {
+          ...p,
+          comments: p.comments.map((c) => (c.id === commentId ? { ...c, flagged: true } : c)),
+        };
+      }),
+    );
+  }, []);
+
   const markNotificationsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
   }, []);
@@ -182,6 +224,7 @@ export function useDenkouStore() {
     toggleCommentLike,
     toggleSave,
     markSolution,
+    reportDanger,
     markNotificationsRead,
     resetAll,
   };

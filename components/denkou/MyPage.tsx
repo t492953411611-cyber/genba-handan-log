@@ -49,7 +49,7 @@ export function MyPage({ posts, onOpen, onLike, onSave, onReset }: Props) {
         <Stat label="投稿" value={mine.length} />
         <Stat label="コメント" value={myComments} icon={<MessageSquare size={13} />} />
         <Stat label="いいね" value={likes} icon={<ThumbsUp size={13} />} />
-        <Stat label="解決" value={solved} icon={<CircleCheckBig size={13} />} />
+        <Stat label="解決報告" value={solved} icon={<CircleCheckBig size={13} />} />
       </section>
 
       <section>

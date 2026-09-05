@@ -3,9 +3,17 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, EyeOff, Send, X } from "lucide-react";
 import { PhotoPicker } from "./PhotoPicker";
+import { SafetyNotice, TroubleNotice } from "./SafetyNotice";
 import { Toggle } from "./Toggle";
 import type { NewPostInput } from "@/lib/denkou/store";
-import { ANON_NAME, CATEGORIES, CURRENT_USER, type CategoryId } from "@/lib/denkou/types";
+import {
+  ANON_NAME,
+  CATEGORIES,
+  CURRENT_USER,
+  SAFETY_CHECKS,
+  type CategoryId,
+  type SafetyCheckId,
+} from "@/lib/denkou/types";
 
 type Props = {
   open: boolean;
@@ -41,6 +49,7 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
   const [anonymous, setAnonymous] = useState(false);
   const [urgent, setUrgent] = useState(false);
   const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const [checks, setChecks] = useState<SafetyCheckId[]>([]);
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
@@ -52,6 +61,7 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
       setAnonymous(defaultCategory === "anonymous");
       setUrgent(false);
       setPhoto(undefined);
+      setChecks([]);
       setTouched(false);
     }
   }, [open, defaultCategory]);
@@ -72,7 +82,10 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
   if (!open) return null;
 
   const isTrouble = category === "trouble";
-  const canSubmit = title.trim().length > 0 && body.trim().length > 0;
+  // トラブル投稿では「確認した項目」を必ず1つ以上選ばせる。
+  // 断定的な質問を減らし、回答側も切り分けから入れるようにするため。
+  const needsChecks = isTrouble && checks.length === 0;
+  const canSubmit = title.trim().length > 0 && body.trim().length > 0 && !needsChecks;
 
   function handleCategory(next: CategoryId) {
     setCategory(next);
@@ -80,10 +93,19 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
     if (next !== "trouble") setUrgent(false);
   }
 
+  function toggleCheck(id: SafetyCheckId) {
+    setChecks((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  }
+
   function handleSubmit() {
     setTouched(true);
-    if (!canSubmit) return;
-    onSubmit({ category, title, body, anonymous, urgent: isTrouble && urgent, photo, site });
+    if (!canSubmit) {
+      document
+        .getElementById(!title.trim() || !body.trim() ? "np-title" : "np-checks")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    onSubmit({ category, title, body, anonymous, urgent: isTrouble && urgent, photo, site, checks });
   }
 
   return (
@@ -108,11 +130,10 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!canSubmit}
             className={`tap flex items-center gap-1.5 rounded-lg px-3 text-sm font-black transition ${
               canSubmit
                 ? "bg-denkou-accent text-denkou-dark active:bg-amber-400"
-                : "bg-white/20 text-white/60"
+                : "bg-white/25 text-white/70"
             }`}
           >
             <Send size={16} strokeWidth={2.8} />
@@ -141,6 +162,8 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
               ))}
             </div>
           </section>
+
+          {isTrouble && <TroubleNotice />}
 
           <section>
             <label htmlFor="np-title" className="mb-1.5 block text-[12px] font-black text-slate-700">
@@ -173,6 +196,45 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
                 touched && !body.trim() ? "border-red-500 bg-red-50" : "border-slate-300 bg-white"
               }`}
             />
+          </section>
+
+          <section id="np-checks">
+            <p className="mb-1.5 text-[12px] font-black text-slate-700">
+              現場で確認した項目{" "}
+              {isTrouble ? (
+                <span className="text-red-600">必須（1つ以上）</span>
+              ) : (
+                <span className="font-bold text-slate-500">任意</span>
+              )}
+            </p>
+            <p className="mb-2 text-[11px] leading-relaxed text-slate-600">
+              測定した内容を先に示すと、回答者が切り分けから入れます。
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {SAFETY_CHECKS.map((c) => {
+                const on = checks.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleCheck(c.id)}
+                    aria-pressed={on}
+                    className={`tap rounded-lg px-2 py-1 text-left text-[12px] font-bold leading-snug transition ${
+                      on
+                        ? "bg-denkou text-white shadow-sm"
+                        : "bg-slate-100 text-slate-700 active:bg-slate-200"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+            {touched && needsChecks && (
+              <p className="mt-1.5 text-[11px] font-bold text-red-700">
+                確認した項目を1つ以上選んでください。
+              </p>
+            )}
           </section>
 
           <section>
@@ -229,9 +291,15 @@ export function NewPostModal({ open, defaultCategory, onClose, onSubmit }: Props
 
           {touched && !canSubmit && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-[12px] font-bold text-red-700">
-              タイトルと本文を入力してください。
+              {!title.trim() || !body.trim()
+                ? "タイトルと本文を入力してください。"
+                : "現場で確認した項目を1つ以上選んでください。"}
             </p>
           )}
+        </div>
+
+        <div className="shrink-0">
+          <SafetyNotice compact />
         </div>
       </div>
     </div>

@@ -11,8 +11,16 @@ import {
   Send,
   ThumbsUp,
 } from "lucide-react";
-import { AnonymousBadge, CategoryBadge, StatusBadge, UrgentBadge } from "./Badges";
+import {
+  AnonymousBadge,
+  CategoryBadge,
+  FlaggedBadge,
+  SafetyCheckList,
+  StatusBadge,
+  UrgentBadge,
+} from "./Badges";
 import { PhotoPicker } from "./PhotoPicker";
+import { DangerReportButton, SafetyNotice } from "./SafetyNotice";
 import { timeAgo } from "@/lib/denkou/store";
 import {
   ANON_NAME,
@@ -30,6 +38,7 @@ type Props = {
   onSave: (postId: string) => void;
   onCommentLike: (postId: string, commentId: string) => void;
   onMarkSolution: (postId: string, commentId: string) => void;
+  onReportDanger: (postId: string, commentId?: string) => void;
   onAddComment: (input: { postId: string; body: string; anonymous: boolean; photo?: string }) => void;
 };
 
@@ -40,6 +49,7 @@ export function PostDetailModal({
   onSave,
   onCommentLike,
   onMarkSolution,
+  onReportDanger,
   onAddComment,
 }: Props) {
   const [draft, setDraft] = useState("");
@@ -129,7 +139,7 @@ export function PostDetailModal({
           {solved && (
             <p className="-mx-3 -mt-3 mb-3 flex items-center gap-1.5 bg-emerald-600 px-3 py-1.5 text-[12px] font-black text-white">
               <CircleCheckBig size={14} strokeWidth={3} />
-              この投稿は解決済です
+              投稿者から「この方法で直った」と報告があった投稿です
             </p>
           )}
 
@@ -160,6 +170,7 @@ export function PostDetailModal({
             {post.urgent && !solved && <UrgentBadge />}
             <CategoryBadge id={post.category} />
             <StatusBadge status={post.status} />
+            {post.flagged && <FlaggedBadge />}
           </div>
 
           <h2 className="mt-2.5 text-[17px] font-black leading-snug text-slate-900">{post.title}</h2>
@@ -170,6 +181,8 @@ export function PostDetailModal({
               {post.site}
             </p>
           )}
+
+          <SafetyCheckList checks={post.checks} />
 
           <p className="mt-2.5 whitespace-pre-wrap text-[14px] leading-7 text-slate-800">
             {post.body}
@@ -200,12 +213,18 @@ export function PostDetailModal({
               />
               参考になった {post.likes}
             </button>
+            <span className="ml-auto">
+              <DangerReportButton
+                flagged={post.flagged}
+                onReport={() => onReportDanger(post.id)}
+              />
+            </span>
           </div>
         </article>
 
         {isOwner && !solved && post.comments.length > 0 && (
           <p className="mx-3 mt-3 rounded-lg bg-amber-100 px-3 py-2 text-[12px] font-bold leading-relaxed text-amber-900 ring-1 ring-amber-300">
-            あなたの投稿です。解決につながったコメントの「これで解決！」を押すと、そのコメントが最上部に固定され、投稿が解決済になります。
+            あなたの投稿です。実際に直ったコメントの「この方法で直りました」を押すと、そのコメントが最上部に固定され、解決報告として表示されます。
           </p>
         )}
 
@@ -222,6 +241,7 @@ export function PostDetailModal({
                 isOwner={isOwner}
                 onLike={() => onCommentLike(post.id, c.id)}
                 onMarkSolution={() => onMarkSolution(post.id, c.id)}
+                onReportDanger={() => onReportDanger(post.id, c.id)}
               />
             ))}
             {ordered.length === 0 && (
@@ -233,7 +253,9 @@ export function PostDetailModal({
         </section>
       </div>
 
-      <div className="safe-bottom shrink-0 border-t border-slate-300 bg-white p-2">
+      <div className="safe-bottom shrink-0 bg-white">
+        <SafetyNotice compact />
+        <div className="p-2">
         {attachOpen && (
           <div className="mb-2">
             <PhotoPicker value={photo} onChange={setPhoto} compact />
@@ -291,6 +313,7 @@ export function PostDetailModal({
           >
             <Send size={19} strokeWidth={2.4} />
           </button>
+          </div>
         </div>
       </div>
     </div>
@@ -302,11 +325,13 @@ function CommentRow({
   isOwner,
   onLike,
   onMarkSolution,
+  onReportDanger,
 }: {
   comment: Comment;
   isOwner: boolean;
   onLike: () => void;
   onMarkSolution: () => void;
+  onReportDanger: () => void;
 }) {
   const mine = comment.authorId === CURRENT_USER.id;
   return (
@@ -318,7 +343,7 @@ function CommentRow({
       {comment.isSolution && (
         <p className="-mx-3 -mt-3 mb-2.5 flex items-center gap-1.5 rounded-t-lg bg-emerald-600 px-3 py-1.5 text-[12px] font-black text-white">
           <CircleCheckBig size={14} strokeWidth={3} />
-          これで解決！（質問者が選んだ回答）
+          この方法で直りました（投稿者の報告）
         </p>
       )}
 
@@ -349,6 +374,12 @@ function CommentRow({
         </div>
       </div>
 
+      {comment.flagged && (
+        <p className="mt-2">
+          <FlaggedBadge />
+        </p>
+      )}
+
       <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-slate-800">
         {comment.body}
       </p>
@@ -375,6 +406,12 @@ function CommentRow({
           {comment.likes}
         </button>
 
+        <DangerReportButton
+          flagged={comment.flagged}
+          onReport={onReportDanger}
+          label="危険として報告"
+        />
+
         {isOwner && (
           <button
             type="button"
@@ -386,7 +423,7 @@ function CommentRow({
             }`}
           >
             <CircleCheckBig size={15} strokeWidth={3} />
-            {comment.isSolution ? "解決を取り消す" : "これで解決！"}
+            {comment.isSolution ? "報告を取り消す" : "この方法で直りました"}
           </button>
         )}
       </div>
