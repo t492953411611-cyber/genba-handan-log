@@ -1,11 +1,11 @@
 {
-  "name": "現場判断ログ",
-  "short_name": "現場判断ログ",
-  "description": "電気工事の施工管理判断を記録・蓄積するアプリ",
+  "name": "電工コネクト",
+  "short_name": "電工コネクト",
+  "description": "電気工事士のための現場SNS。トラブル解決・職人ノウハウ・匿名Q&A・工具レビュー。",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f4f7f8",
-  "theme_color": "#163047",
+  "background_color": "#e5e7eb",
+  "theme_color": "#1E3A8A",
   "icons": [
     { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "./apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
