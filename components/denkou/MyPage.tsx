@@ -1,6 +1,16 @@
 "use client";
 
-import { Award, CircleCheckBig, MapPin, MessageSquare, RotateCcw, ThumbsUp } from "lucide-react";
+import Link from "next/link";
+import {
+  Award,
+  CircleCheckBig,
+  ExternalLink,
+  MapPin,
+  MessageSquare,
+  RotateCcw,
+  ShieldAlert,
+  ThumbsUp,
+} from "lucide-react";
 import { PostCard } from "./PostCard";
 import { CURRENT_USER, type Post } from "@/lib/denkou/types";
 
@@ -65,6 +75,33 @@ export function MyPage({ posts, onOpen, onLike, onSave, onReset }: Props) {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-300">
+        <p className="border-b border-slate-200 px-3 py-2 text-[12px] font-black text-slate-700">
+          規約・お問い合わせ
+        </p>
+        <ul className="divide-y divide-slate-100">
+          {[
+            { href: "/terms/", label: "利用規約（安全に関する免責を含む）" },
+            { href: "/privacy/", label: "プライバシーポリシー" },
+            { href: "/contact/", label: "お問い合わせ・削除依頼" },
+          ].map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                className="tap flex items-center justify-between gap-2 px-3 text-[13px] font-bold text-slate-700 active:bg-slate-50"
+              >
+                {item.label}
+                <ExternalLink size={14} strokeWidth={2.4} className="shrink-0 text-slate-400" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className="flex items-start gap-1.5 border-t border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] leading-relaxed text-slate-600">
+          <ShieldAlert size={13} strokeWidth={2.6} className="mt-0.5 shrink-0 text-slate-500" />
+          危険な投稿を見つけたら、投稿・コメントの「危険な内容として報告」を押してください。
+        </p>
       </section>
 
       <section className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-300">
