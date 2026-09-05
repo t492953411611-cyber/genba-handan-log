@@ -1,9 +1,112 @@
 @import "tailwindcss";
 
-:root { --navy: #163047; --blue: #176b87; --paper: #f4f7f8; }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: #1e2933; font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; }
-button, input, select, textarea { font: inherit; }
-input, select, textarea { width: 100%; border: 1px solid #cbd5dc; border-radius: 0.5rem; background: white; padding: 0.7rem 0.8rem; color: #1e2933; }
-input:focus, select:focus, textarea:focus { outline: 2px solid #176b87; outline-offset: 1px; border-color: #176b87; }
-textarea { min-height: 6rem; resize: vertical; }
+@theme {
+  /* 電工コネクト: インダストリアルネイビー / 電気を想起させるアンバー */
+  --color-denkou: #1e3a8a;
+  --color-denkou-dark: #172554;
+  --color-denkou-accent: #f59e0b;
+  --color-denkou-accent-dark: #b45309;
+}
+
+@layer base {
+  :root {
+    --navy: #163047;
+    --blue: #176b87;
+    --paper: #f4f7f8;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: #e5e7eb;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic",
+      Meiryo, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  /* 既存の「現場判断ログ」(/cases) 向けフォーム既定値。
+     @layer base に入れているので Tailwind ユーティリティ側が常に勝つ。 */
+  input,
+  select,
+  textarea {
+    width: 100%;
+    border: 1px solid #cbd5dc;
+    border-radius: 0.5rem;
+    background: white;
+    padding: 0.7rem 0.8rem;
+    color: #1e2933;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid #176b87;
+    outline-offset: 1px;
+    border-color: #176b87;
+  }
+
+  textarea {
+    min-height: 6rem;
+    resize: vertical;
+  }
+}
+
+@layer utilities {
+  /* 現場で使うタップ領域は最低 44px を確保する */
+  .tap {
+    min-height: 44px;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  @keyframes denkou-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-rise {
+    animation: denkou-rise 0.22s ease-out both;
+  }
+
+  @keyframes denkou-sheet {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-sheet {
+    animation: denkou-sheet 0.24s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+}
