@@ -88,6 +88,20 @@ export function ConsentGate() {
               危険だと感じた投稿は、<b className="font-bold">「危険な内容として報告」</b>を押してください。
             </span>
           </li>
+          <li className="flex gap-2">
+            <CircleCheckBig size={16} strokeWidth={2.8} className="mt-0.5 shrink-0 text-denkou" />
+            <span>
+              投稿や登録情報は、<b className="font-bold">米国に所在する事業者のクラウド</b>
+              （Supabase, Cloudflare）に保管されます。個人情報保護法により、
+              あらかじめ同意をいただく必要があります。
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <CircleCheckBig size={16} strokeWidth={2.8} className="mt-0.5 shrink-0 text-denkou" />
+            <span>
+              未成年の方は、<b className="font-bold">保護者の同意</b>を得てからご利用ください。
+            </span>
+          </li>
         </ul>
 
         <p className="mt-5 text-[12.5px] leading-relaxed text-slate-600">
@@ -119,7 +133,7 @@ export function ConsentGate() {
             {checked && <CircleCheckBig size={13} strokeWidth={3.5} />}
           </span>
           <span className="text-[13px] font-bold leading-snug text-slate-800">
-            上記を読み、利用規約とプライバシーポリシーに同意します
+            上記を読み、利用規約とプライバシーポリシー（外国にある第三者への個人データの提供を含む）に同意します
           </span>
         </button>
 
