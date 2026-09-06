@@ -11,6 +11,13 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <LegalShell title="利用規約" updatedAt={LEGAL_UPDATED_AT}>
+      <Highlight>
+        現在の電工コネクトは<b>体験版</b>です。投稿はご利用の端末内にのみ保存され、
+        サーバーへの送信も、他の利用者への表示も行っていません。
+        本規約のうち、アカウント登録・データの保管・第三者提供に関する条項は、
+        本公開の際に適用されるものとしてあらかじめ定めています。
+      </Highlight>
+
       <p className="text-[13.5px] leading-relaxed text-slate-700">
         この利用規約（以下「本規約」）は、電工コネクト（以下「本サービス」）の利用条件を定めるものです。
         本サービスに登録し、または本サービスを利用された方（以下「利用者」）は、

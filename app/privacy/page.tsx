@@ -11,6 +11,13 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <LegalShell title="プライバシーポリシー" updatedAt={LEGAL_UPDATED_AT}>
+      <Highlight>
+        現在の電工コネクトは<b>体験版</b>で、個人情報の取得を行っていません。
+        入力された内容はご利用の端末内（ブラウザの保存領域）にのみ保存され、
+        運営者を含む誰にも送信されません。
+        本ポリシーは、本公開の際の取り扱いをあらかじめ定めるものです。
+      </Highlight>
+
       <p className="text-[13.5px] leading-relaxed text-slate-700">
         電工コネクト（以下「本サービス」）における、利用者の個人情報の取り扱いについて定めます。
         本ポリシーは、個人情報の保護に関する法律（個人情報保護法）に基づき、
