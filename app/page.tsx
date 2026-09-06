@@ -9,6 +9,7 @@ import { MyPage } from "@/components/denkou/MyPage";
 import { NewPostModal } from "@/components/denkou/NewPostModal";
 import { PostCard } from "@/components/denkou/PostCard";
 import { ConsentGate } from "@/components/denkou/ConsentGate";
+import { DemoBanner } from "@/components/denkou/DemoBanner";
 import { PostDetailModal } from "@/components/denkou/PostDetailModal";
 import { SearchBar } from "@/components/denkou/SearchBar";
 import { useDenkouStore, type NewPostInput } from "@/lib/denkou/store";
@@ -131,6 +132,8 @@ export default function DenkouConnectPage() {
           onToggle={handleToggleNotif}
           onClose={() => setNotifOpen(false)}
         />
+
+        <DemoBanner />
 
         {tab === "timeline" && (
           <>

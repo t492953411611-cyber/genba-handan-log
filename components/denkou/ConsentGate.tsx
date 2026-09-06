@@ -65,6 +65,14 @@ export function ConsentGate() {
           <li className="flex gap-2">
             <CircleCheckBig size={16} strokeWidth={2.8} className="mt-0.5 shrink-0 text-denkou" />
             <span>
+              これは<b className="font-bold">体験版</b>です。書いた投稿は
+              <b className="font-bold">この端末の中だけに保存され、他の人には表示されません</b>。
+              使い勝手を試すためのものとお考えください。
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <CircleCheckBig size={16} strokeWidth={2.8} className="mt-0.5 shrink-0 text-denkou" />
+            <span>
               活線作業や高圧受電設備の<b className="font-bold">作業手順そのものを尋ねる投稿は扱いません</b>。
             </span>
           </li>
@@ -91,9 +99,9 @@ export function ConsentGate() {
           <li className="flex gap-2">
             <CircleCheckBig size={16} strokeWidth={2.8} className="mt-0.5 shrink-0 text-denkou" />
             <span>
-              投稿や登録情報は、<b className="font-bold">米国に所在する事業者のクラウド</b>
-              （Supabase, Cloudflare）に保管されます。個人情報保護法により、
-              あらかじめ同意をいただく必要があります。
+              将来ここが本公開になった際は、投稿や登録情報が
+              <b className="font-bold">米国に所在する事業者のクラウド</b>（Supabase, Cloudflare）に
+              保管されます。体験版の現在は、どこにも送信していません。
             </span>
           </li>
           <li className="flex gap-2">
