@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>電圧降下 現場計算</title>
+<meta name="description" content="電圧降下と、許容内に収まる最小ケーブルサイズを現場で計算するアプリ">
+<meta name="theme-color" content="#1f5fa8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="電圧降下">
+<style>body{margin:0;padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
+</head>
+<body>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDGothic:wght@700&display=swap">
+<style>
+/* Layout: one column field tool. Sticky result bar on top, input groups below, saved records at the end. */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#18222d; --muted:#5b6876; --line:#d3d9e0;
+  --accent:#1f5fa8; --accent-ink:#ffffff; --chip:#e3e8ee;
+  --ok:#1d7a46; --ok-bg:#e1f3e8; --ng:#c0302b; --ng-bg:#fbe5e3; --warn:#9a6400; --warn-bg:#fff2d6;
+  --f-body:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  --f-num:"BIZ UDGothic","Hiragino Sans","Noto Sans JP",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --panel:#1a2129; --ink:#e8edf2; --muted:#9aa7b4; --line:#2e3843;
+  --accent:#5b9be0; --accent-ink:#0c1218; --chip:#26303a;
+  --ok:#5cc98a; --ok-bg:#163223; --ng:#ff7b72; --ng-bg:#3a1a19; --warn:#f0b549; --warn-bg:#3a2c10; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --panel:#1a2129; --ink:#e8edf2; --muted:#9aa7b4; --line:#2e3843;
+  --accent:#5b9be0; --accent-ink:#0c1218; --chip:#26303a;
+  --ok:#5cc98a; --ok-bg:#163223; --ng:#ff7b72; --ng-bg:#3a1a19; --warn:#f0b549; --warn-bg:#3a2c10; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:0 48px;display:flex;flex-direction:column;gap:14px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+/* Result bar */
+.result{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin-inline:-16px;padding:10px 16px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.modes button{min-height:44px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;font:700 14px var(--f-body)}
+.modes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.res-main{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--panel);border:2px solid var(--line)}
+.res-main.ok{border-color:var(--ok);background:var(--ok-bg)}
+.res-main.ng{border-color:var(--ng);background:var(--ng-bg)}
+.res-pct{font:700 34px/1.1 var(--f-num);font-variant-numeric:tabular-nums}
+.res-sub{color:var(--muted);font-size:13px}
+.badge{font:700 18px var(--f-num);padding:6px 12px;border-radius:6px;color:var(--panel)}
+.ok .badge{background:var(--ok)} .ng .badge{background:var(--ng)}
+.res-min{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
+.res-min b{font:700 20px var(--f-num)}
+.idle .badge{background:var(--muted)}
+.res-amp{grid-column:1/-1}
+.res-amp b.ok{color:var(--ok)} .res-amp b.ng{color:var(--ng)}
+
+/* Groups */
+.group{display:flex;flex-direction:column;gap:8px}
+.label{font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.chip{min-height:44px;min-width:48px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--ink);font:700 15px var(--f-body);white-space:nowrap;flex:none}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip small{font-weight:400;opacity:.8;margin-left:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.inbox{display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding-right:10px}
+.inbox:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.inbox input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:700 24px var(--f-num);padding:8px 10px;height:52px}
+.inbox input:focus{outline:none}
+.inbox span{color:var(--muted);font-weight:700}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;min-height:32px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:6px;font:700 12px var(--f-body)}
+.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+details{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+summary{cursor:pointer;padding:12px;font-weight:700;min-height:44px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"＋";color:var(--muted)}
+details[open] summary::after{content:"－"}
+.dbody{padding:0 12px 12px;display:flex;flex-direction:column;gap:12px}
+
+.note{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--warn-bg);color:var(--warn)}
+.basis{font-size:12px;color:var(--muted)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--muted);font-weight:700}
+tr.sel td{background:var(--chip)}
+td.ok{color:var(--ok);font-weight:700} td.ng{color:var(--ng);font-weight:700}
+.tablewrap{overflow-x:auto}
+
+.save{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.save h2,.hist h2{font-size:16px;margin:0}
+.tin{width:100%;height:46px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 10px;font:15px var(--f-body)}
+.btn{min-height:48px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:700 16px var(--f-body);padding:0 14px}
+.btn.sub{background:transparent;color:var(--accent)}
+.btn.danger{border-color:var(--ng);background:transparent;color:var(--ng)}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btns .btn{flex:1 1 140px}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.btn.line{background:#06C755;border-color:#06C755;color:#fff}
+.share{display:flex;flex-direction:column;gap:8px}
+.hist{display:flex;flex-direction:column;gap:10px}
+.rec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.rec-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.rec-head b{min-width:0;overflow-wrap:anywhere}
+.rec-meta{font-size:13px;color:var(--muted)}
+.rec .j-ok{color:var(--ok);font-weight:700} .rec .j-ng{color:var(--ng);font-weight:700}
+.rec .btns .btn{min-height:40px;font-size:14px;flex:0 1 auto}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:700;z-index:20;max-width:calc(100% - 32px)}
+.copybox{width:100%;min-height:120px;font:12px var(--f-num);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+.empty{color:var(--muted);font-size:14px}
+.foot{font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <section class="result" aria-live="polite">
+    <div class="modes" role="group" aria-label="計算モード">
+      <button id="m-simple" data-mode="simple">低圧 簡易</button>
+      <button id="m-formal" data-mode="formal">低圧 正式</button>
+      <button id="m-hv" data-mode="hv">高圧 6.6kV</button>
+    </div>
+    <div id="resMain" class="res-main idle">
+      <div>
+        <div class="res-pct num" id="rPct">--</div>
+        <div class="res-sub num" id="rSub">電流とこう長を入れてください</div>
+      </div>
+      <div class="badge" id="rBadge">--</div>
+      <div class="res-sub num res-amp" id="rAmp" hidden></div>
+      <div class="res-min"><span class="res-sub"><span id="rMinLbl">降下</span><span id="rAllow" class="num">2</span>%以内<span id="rMinAmp">・許容電流OK</span>の最小</span><b id="rMin">--</b><span class="res-sub num" id="rMinPct"></span></div>
+    </div>
+  </section>
+
+  <div id="exampleNote" class="note" hidden>例の値が入っています。数字を打ち替えるとすぐ計算し直します。</div>
+
+  <!-- Low voltage system -->
+  <div class="group" id="g-sys">
+    <div class="label">配電方式</div>
+    <div class="chips" id="sysChips"></div>
+  </div>
+
+  <!-- HV load input mode -->
+  <div class="group" id="g-hvload" hidden>
+    <div class="label">負荷の入れ方</div>
+    <div class="seg" role="group">
+      <button id="hv-kva" data-hvin="kva">容量 kVA</button>
+      <button id="hv-amp" data-hvin="amp">電流 A</button>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label class="label" for="inI" id="lblI">電流</label>
+      <div class="inbox"><input id="inI" inputmode="decimal" enterkeyhint="next" autocomplete="off"><span id="unitI">A</span></div>
+    </div>
+    <div class="field">
+      <label class="label" for="inL">こう長（片道）</label>
+      <div class="inbox"><input id="inL" inputmode="decimal" enterkeyhint="done" autocomplete="off"><span>m</span></div>
+    </div>
+  </div>
+  <div class="basis num" id="hvCurrent" hidden></div>
+
+  <div class="group" id="g-type">
+    <div class="label">ケーブル種類</div>
+    <div class="chips" id="typeChips"></div>
+  </div>
+
+  <div class="group" id="g-inst">
+    <div class="label" id="instLabel">布設条件</div>
+    <div class="chips" id="instChips"></div>
+    <div class="label">周囲温度</div>
+    <div class="chips" id="ambChips"></div>
+  </div>
+
+  <div class="group">
+    <div class="label">サイズ（選ばなくても最小サイズは出ます）</div>
+    <div class="chips scroll" id="sizeChips"></div>
+  </div>
+
+  <div class="group" id="g-pf">
+    <div class="label">力率 cosθ</div>
+    <div class="chips" id="pfChips"></div>
+  </div>
+
+  <div class="group">
+    <div class="label">許容電圧降下率</div>
+    <div class="chips" id="allowChips"></div>
+  </div>
+
+  <div id="hint" class="note" hidden></div>
+
+  <details id="advanced">
+    <summary>詳細設定 <span class="res-sub" id="advSum"></span></summary>
+    <div class="dbody">
+      <div class="group" id="g-pf2" hidden>
+        <div class="label">力率 cosθ（高圧）</div>
+        <div class="chips" id="pfChips2"></div>
+      </div>
+      <div class="group">
+        <div class="label">周波数</div>
+        <div class="chips" id="freqChips"></div>
+      </div>
+      <div class="group">
+        <div class="label">導体温度（抵抗の補正）</div>
+        <div class="chips" id="tempChips"></div>
+      </div>
+      <div class="basis">簡易式はこの設定を使いません。抵抗は20℃値を温度で補正、リアクタンスは50Hz値×1.2で60Hzに換算しています。</div>
+    </div>
+  </details>
+
+  <details id="tableBox">
+    <summary>サイズ別の降下率</summary>
+    <div class="dbody"><div class="tablewrap"><table id="sizeTable"></table></div><div class="basis" id="basis"></div></div>
+  </details>
+
+  <section class="save">
+    <h2>報告用に保存</h2>
+    <div class="row2">
+      <div class="field"><label class="label" for="inSite">現場名</label><input class="tin" id="inSite" autocomplete="off"></div>
+      <div class="field"><label class="label" for="inCircuit">回路名</label><input class="tin" id="inCircuit" autocomplete="off" placeholder="例：動力幹線1"></div>
+    </div>
+    <button class="btn" id="btnSave">この結果を保存</button>
+  </section>
+
+  <section class="hist">
+    <div class="rec-head"><h2>保存した結果 <span class="res-sub num" id="histCount"></span></h2></div>
+    <div class="btns" id="histBtns">
+      <button class="btn sub" id="btnCopyTsv">Excel用にコピー</button>
+      <button class="btn sub" id="btnCopyText">報告文をコピー</button>
+      <a class="btn line" id="lineAll" target="_blank" rel="noopener">全件をLINEで送る</a>
+    </div>
+    <textarea class="copybox" id="copyBox" readonly hidden></textarea>
+    <div id="histList"></div>
+    <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
+  </section>
+
+  <section class="share">
+    <a class="btn line" id="lineApp" target="_blank" rel="noopener">このアプリをLINEで送る</a>
+  </section>
+
+  <p class="foot">試作版 v0.2。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流はまだ入っていません。ケーブルの抵抗はJIS規格の記憶値、リアクタンスは推定値です（メーカー表と照合予定）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script id="calc">
+const DATA={
+  alpha:0.00393, f60:1.2,
+  CV:{label:"CV",tmax:90,sizes:[
+    ["2",2,9.42,0.110],["3.5",3.5,5.30,0.105],["5.5",5.5,3.40,0.100],["8",8,2.36,0.099],["14",14,1.34,0.094],
+    ["22",22,0.849,0.090],["38",38,0.491,0.086],["60",60,0.311,0.084],["100",100,0.187,0.081],["150",150,0.124,0.080],
+    ["200",200,0.0933,0.079],["250",250,0.0754,0.079],["325",325,0.0579,0.078]]},
+  CVT:{label:"CVT",tmax:90,sizes:[
+    ["8",8,2.36,0.099],["14",14,1.34,0.094],["22",22,0.849,0.090],["38",38,0.491,0.086],["60",60,0.311,0.084],
+    ["100",100,0.187,0.081],["150",150,0.124,0.080],["200",200,0.0933,0.079],["250",250,0.0754,0.079],["325",325,0.0579,0.078]]},
+  VVF:{label:"VVF",tmax:60,sizes:[["1.6mm",2.01,8.92,0.110],["2.0mm",3.14,5.65,0.105],["2.6mm",5.31,3.35,0.100]]},
+  CVT6600:{label:"6.6kV CVT",tmax:90,sizes:[
+    ["22",22,0.849,0.130],["38",38,0.491,0.120],["60",60,0.311,0.112],["100",100,0.187,0.104],
+    ["150",150,0.124,0.098],["200",200,0.0933,0.094],["250",250,0.0754,0.092],["325",325,0.0579,0.089]]}
+};
+// 許容電流 [A]（1条布設）
+// CV・CVT: JCS 0168-2、周囲温度40℃・導体90℃。air=気中・暗きょ（ケーブルラック・ころがし含む）、conduit=電線管に1条
+// VVF: 内線規程・電技解釈146条の考え方。IV電線の値（周囲30℃）× 電流減少係数（同一管内の電線数）、小数1位を7捨8入
+const AMP={
+  air:{
+    CV2:{"2":28,"3.5":39,"5.5":52,"8":65,"14":91,"22":120,"38":170,"60":225,"100":310,"150":400,"200":485,"250":560,"325":660},
+    CV3:{"2":23,"3.5":33,"5.5":44,"8":54,"14":76,"22":100,"38":140,"60":190,"100":260,"150":340,"200":410,"250":470,"325":555},
+    CVT:{"8":62,"14":86,"22":110,"38":155,"60":210,"100":290,"150":380,"200":465,"250":535,"325":635}},
+  conduit:{
+    CV2:{"2":23,"3.5":31,"5.5":41,"8":51,"14":70,"22":93,"38":135,"60":175,"100":245,"150":320,"200":390,"250":455,"325":540},
+    CV3:{"2":19,"3.5":26,"5.5":35,"8":43,"14":59,"22":77,"38":110,"60":150,"100":210,"150":265,"200":335,"250":380,"325":450},
+    CVT:{"22":82,"38":110,"60":150,"100":215,"150":275,"200":340,"250":395,"325":475}},
+  IV:{"1.6mm":27,"2.0mm":35,"2.6mm":48}
+};
+const WIRES={"3":{label:"3本以下",f:0.70},"4":{label:"4本",f:0.63},"6":{label:"5〜6本",f:0.56},"15":{label:"7〜15本",f:0.49}};
+// 周囲温度の補正係数。90℃(CV)はJCS 0168-2の表、60℃(VVF)は √((60−θ)/30) を小数2桁に丸めた値
+const TEMP_F={x90:{20:1.18,25:1.14,30:1.10,35:1.05,40:1,45:0.95,50:0.89},v60:{30:1,35:0.91,40:0.82,45:0.71,50:0.58}};
+const round78=v=>{const n=Math.floor(v);return v-n>=0.8-1e-9?n+1:n};
+const INST={air:"気中・ラック・暗きょ",conduit:"電線管"};
+const AMP_COL={CV:"CV",CV2:"CV 2心",CV3:"CV 3心",CVT:"CVT",VVF:"VVF"};
+// 許容電流（周囲温度補正込み）。データが無いサイズは null
+function ampFor(type,sizeName,o){
+  if(type==="CVT6600")return null;
+  let base,col,t0,tmax;
+  if(type==="VVF"){col="VVF";const iv=AMP.IV[sizeName];base=iv&&round78(iv*WIRES[o.wires].f);t0=30;tmax=60;}
+  else{col=type==="CVT"?"CVT":(SYSTEMS[o.sys].kF===2?"CV2":"CV3");base=AMP[o.inst][col][sizeName];t0=40;tmax=90;}
+  if(!base)return {none:true,col};
+  const th=o.amb==="base"?t0:Number(o.amb);
+  const f=(type==="VVF"?TEMP_F.v60:TEMP_F.x90)[th]??(th>=tmax?0:Math.sqrt((tmax-th)/(tmax-t0)));
+  return {A:Math.floor(base*f),base,f,th,col};
+}
+const ampOk=(a,I)=>!!a&&!a.none&&a.A>=I-1e-9;
+// 配電方式: 簡易係数, 正式係数, 降下率の基準電圧, 送電電圧
+const SYSTEMS={
+  "1p2w100":{label:"単相2線",v:"100V",kS:35.6,kF:2,base:100,vs:100},
+  "1p2w200":{label:"単相2線",v:"200V",kS:35.6,kF:2,base:200,vs:200},
+  "1p3w":   {label:"単相3線",v:"100/200V",kS:17.8,kF:1,base:100,vs:100},
+  "3p3w200":{label:"三相3線",v:"200V",kS:30.8,kF:Math.sqrt(3),base:200,vs:200}
+};
+const sizeOf=(type,name)=>{const s=DATA[type].sizes.find(x=>x[0]===name);return s&&{name:s[0],area:s[1],R20:s[2],X50:s[3]}};
+const listOf=type=>DATA[type].sizes.map(s=>({name:s[0],area:s[1],R20:s[2],X50:s[3]}));
+function rx(type,sz,o){
+  const t=o.temp==="auto"?DATA[type].tmax:Number(o.temp);
+  const R=sz.R20*(1+DATA.alpha*(t-20));
+  const X=sz.X50*(o.freq===60?DATA.f60:1);
+  return {R,X,t};
+}
+// 1サイズの電圧降下。戻り値 {e,pct,...}
+function dropFor(mode,type,sz,o){
+  if(mode==="simple"){
+    const s=SYSTEMS[o.sys];
+    const e=s.kS*o.L*o.I/(1000*sz.area);
+    return {e,pct:e/s.base*100,base:s.base,vs:s.vs};
+  }
+  const {R,X,t}=rx(type,sz,o);
+  const cos=o.pf,sin=Math.sqrt(Math.max(0,1-cos*cos));
+  if(mode==="formal"){
+    const s=SYSTEMS[o.sys];
+    const e=s.kF*o.I*(o.L/1000)*(R*cos+X*sin);
+    return {e,pct:e/s.base*100,base:s.base,vs:s.vs,R,X,t};
+  }
+  const e=Math.sqrt(3)*o.I*(o.L/1000)*(R*cos+X*sin);
+  return {e,pct:e/6600*100,base:6600,vs:6600,R,X,t};
+}
+// 最小サイズ: 電圧降下が許容内、かつ（低圧は）許容電流 ≧ 負荷電流。選択種類で不可なら VVF→CV で探す
+// by: "drop"=電圧降下で決まった / "amp"=許容電流で決まった
+function minSize(mode,type,o){
+  const tryType=tp=>{
+    let dropOnly=null;
+    for(const sz of listOf(tp)){
+      const r=dropFor(mode,tp,sz,o), dOk=r.pct<=o.allow+1e-9;
+      if(dOk&&!dropOnly)dropOnly=sz.name;
+      const a=ampFor(tp,sz.name,o);
+      if(dOk&&(a===null||ampOk(a,o.I)))return {type:tp,sz,r,a,by:dropOnly===sz.name?"drop":"amp"};
+    }
+    return null;
+  };
+  const hit=tryType(type);
+  if(hit)return hit;
+  if(type==="VVF"){const cv=tryType("CV");if(cv)return {...cv,fallback:true};}
+  return {none:true};
+}
+// 簡易式の必要断面積
+function areaMin(o){const s=SYSTEMS[o.sys];const eA=s.base*o.allow/100;return s.kS*o.L*o.I/(1000*eA);}
+function hvCurrent(kva){return kva/(Math.sqrt(3)*6.6);}
+</script>
+
+<script>
+const $=id=>document.getElementById(id);
+const DEF={mode:"simple",sys:"3p3w200",I:"50",L:"80",type:"CV",size:"22",inst:"air",wires:"3",amb:"base",pf:0.9,allow:2,freq:60,temp:"auto",
+  hvIn:"kva",hvLoad:"500",hvL:"1200",hvSize:"",hvAllow:2,hvPf:0.9,site:"",circuit:""};
+let st={...DEF}, saved=[], firstRun=true;
+const store={
+  get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+(function load(){const s=store.get("vd.state");if(s){st={...DEF,...s};firstRun=false}saved=store.get("vd.saved")||[]})();
+
+const fmt=(x,d)=>Number.isFinite(x)?x.toFixed(d):"--";
+const numIn=v=>{const n=parseFloat(String(v).replace(/[，,]/g,"").replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)));return Number.isFinite(n)&&n>0?n:NaN};
+
+function chipRow(el,items,cur,onPick,cls){
+  el.innerHTML="";
+  items.forEach(it=>{
+    const b=document.createElement("button");b.type="button";b.className="chip"+(cls?" "+cls:"");
+    b.innerHTML=it.html||it.label;b.setAttribute("aria-pressed",String(it.value===cur));
+    b.addEventListener("click",()=>{onPick(it.value);});
+    el.appendChild(b);
+  });
+}
+const isHV=()=>st.mode==="hv";
+const cableType=()=>isHV()?"CVT6600":st.type;
+
+function opts(){
+  const hv=isHV();
+  let I,L=numIn(hv?st.hvL:st.L);
+  if(hv){const v=numIn(st.hvLoad);I=st.hvIn==="kva"?hvCurrent(v):v;}else I=numIn(st.I);
+  return {mode:st.mode,sys:st.sys,I,L,pf:hv?st.hvPf:st.pf,allow:hv?st.hvAllow:st.allow,freq:st.freq,temp:st.temp,inst:st.inst,wires:st.wires,amb:st.amb};
+}
+function curSizeName(){return isHV()?st.hvSize:st.size}
+
+function renderControls(){
+  const hv=isHV();
+  ["simple","formal","hv"].forEach(m=>$("m-"+m).setAttribute("aria-pressed",String(st.mode===m)));
+  $("g-sys").hidden=hv; $("g-type").hidden=hv; $("g-hvload").hidden=!hv;
+  $("g-pf").hidden=st.mode!=="formal"; $("g-pf2").hidden=!hv;
+  $("advanced").hidden=st.mode==="simple";
+  chipRow($("sysChips"),Object.entries(SYSTEMS).map(([k,s])=>({value:k,html:s.label+"<small>"+s.v+"</small>"})),st.sys,v=>set({sys:v}));
+  chipRow($("typeChips"),[{value:"CV",html:"CV<small>多心</small>"},{value:"CVT",label:"CVT"},{value:"VVF",label:"VVF"}],st.type,v=>set({type:v,size:""}));
+  $("g-inst").hidden=hv;
+  const vvf=st.type==="VVF";
+  $("instLabel").textContent=vvf?"同じ管に入れる電線の本数（ころがしは3本以下）":"布設条件";
+  if(vvf)chipRow($("instChips"),Object.entries(WIRES).map(([k,w])=>({value:k,label:w.label})),st.wires,v=>set({wires:v}));
+  else chipRow($("instChips"),Object.entries(INST).map(([k,l])=>({value:k,label:l})),st.inst,v=>set({inst:v}));
+  chipRow($("ambChips"),[{value:"base",html:"基準<small>"+(vvf?30:40)+"℃</small>"},...["30","35","40","45","50"].filter(v=>!(vvf?v==="30":v==="40")).map(v=>({value:v,label:v+"℃"}))],st.amb,v=>set({amb:v}));
+  const sizes=listOf(cableType());
+  chipRow($("sizeChips"),[{value:"",label:"未選択"},...sizes.map(s=>({value:s.name,label:s.name+(s.name.endsWith("mm")?"":"<small>sq</small>")}))],curSizeName(),v=>set(hv?{hvSize:v}:{size:v}));
+  const pfs=[1.0,0.9,0.85,0.8].map(v=>({value:v,label:v.toFixed(v===0.85?2:1)}));
+  const selChip=$("sizeChips").querySelector('[aria-pressed="true"]');
+  if(selChip)$("sizeChips").scrollLeft=Math.max(0,selChip.offsetLeft-$("sizeChips").offsetLeft-40);
+  chipRow($("pfChips"),pfs,st.pf,v=>set({pf:v}));
+  chipRow($("pfChips2"),pfs,st.hvPf,v=>set({hvPf:v}));
+  chipRow($("allowChips"),[2,3,4,5,6,7].map(v=>({value:v,label:v+"%"})),hv?st.hvAllow:st.allow,v=>set(hv?{hvAllow:v}:{allow:v}));
+  chipRow($("freqChips"),[{value:60,label:"60Hz"},{value:50,label:"50Hz"}],st.freq,v=>set({freq:v}));
+  const tmax=DATA[cableType()].tmax;
+  chipRow($("tempChips"),[{value:"auto",html:"最高温度<small>"+tmax+"℃</small>"},...["20","60","75","90"].map(v=>({value:v,label:v+"℃"}))],st.temp,v=>set({temp:v}));
+  $("hv-kva").setAttribute("aria-pressed",String(st.hvIn==="kva"));
+  $("hv-amp").setAttribute("aria-pressed",String(st.hvIn==="amp"));
+  $("lblI").textContent=hv?(st.hvIn==="kva"?"負荷容量":"電流"):"電流";
+  $("unitI").textContent=hv&&st.hvIn==="kva"?"kVA":"A";
+  const inI=$("inI"),inL=$("inL");
+  const wantI=hv?st.hvLoad:st.I, wantL=hv?st.hvL:st.L;
+  if(document.activeElement!==inI)inI.value=wantI;
+  if(document.activeElement!==inL)inL.value=wantL;
+  $("inSite").value=st.site; $("inCircuit").value=st.circuit;
+  const t=st.temp==="auto"?tmax:st.temp;
+  $("advSum").textContent=(hv?"力率"+st.hvPf+"・":"")+st.freq+"Hz・"+t+"℃";
+  $("exampleNote").hidden=!firstRun;
+}
+
+let last=null;
+function compute(){
+  const o=opts(), type=cableType(), mode=st.mode;
+  const box=$("resMain"); box.className="res-main idle";
+  $("rAllow").textContent=o.allow;
+  $("rMinAmp").hidden=isHV(); $("rAmp").hidden=true;
+  $("hvCurrent").hidden=!(isHV()&&st.hvIn==="kva");
+  if(isHV()&&st.hvIn==="kva")$("hvCurrent").textContent=Number.isFinite(o.I)?"負荷電流 I = S ÷ (√3 × 6.6kV) = "+fmt(o.I,1)+" A":"";
+  last=null;
+  if(!Number.isFinite(o.I)||!Number.isFinite(o.L)){
+    $("rPct").textContent="--";$("rSub").textContent="電流とこう長を入れてください";$("rBadge").textContent="--";
+    $("rMin").textContent="--";$("rMinPct").textContent="";$("sizeTable").innerHTML="";$("hint").hidden=true;$("basis").textContent="";return;
+  }
+  const ms=minSize(mode,type,o);
+  const minLabel=ms.none?(type==="VVF"?"CVでも325sq超":"325sq超（並列などを検討）"):(DATA[ms.type].label+" "+ms.sz.name+(ms.sz.name.endsWith("mm")?"":"sq")+(ms.by==="amp"?"（許容電流で決定）":""));
+  $("rMin").textContent=minLabel;
+  $("rMinPct").textContent=ms.none?"":fmt(ms.r.pct,2)+"%（"+fmt(ms.r.e,ms.r.base>1000?1:2)+"V）"+(ms.fallback?"　VVFでは不可":"");
+  const szName=curSizeName(), sz=szName?sizeOf(type,szName):null;
+  let r=null;
+  if(sz){
+    r=dropFor(mode,type,sz,o);
+    const dOk=r.pct<=o.allow+1e-9;
+    const a=ampFor(type,sz.name,o);
+    r.a=a; r.aOk=a===null?null:ampOk(a,o.I); r.dOk=dOk;
+    const ok=dOk&&r.aOk!==false;
+    box.className="res-main "+(ok?"ok":"ng");
+    $("rPct").textContent=fmt(r.pct,2)+"%";
+    const dv=r.base>1000?1:2;
+    $("rSub").textContent=DATA[type].label+" "+sz.name+(sz.name.endsWith("mm")?"":"sq")+"　降下 "+fmt(r.e,dv)+"V　受電端 "+fmt(r.vs-r.e,dv)+"V";
+    $("rBadge").textContent=ok?"OK":"NG";
+    if(a){
+      const ra=$("rAmp");ra.hidden=false;
+      ra.innerHTML=a.none?"許容電流：このサイズの電線管布設のデータがありません":
+        "許容電流 <b class=\""+(r.aOk?"ok":"ng")+"\">"+a.A+"A</b>（"+condLabel(type,o,a)+"）"+(r.aOk?" ≧ ":" ＜ ")+"負荷"+fmt(o.I,1)+"A"+(r.aOk?"":"　電流不足");
+    }
+  }else{
+    $("rPct").textContent=ms.none?"--":fmt(ms.r.pct,2)+"%";
+    $("rSub").textContent="サイズ未選択のため、最小サイズでの値です";
+    $("rBadge").textContent="—";
+  }
+  // hint
+  const hint=$("hint");hint.hidden=true;
+  if(mode==="simple"){
+    const am=areaMin(o);
+    const ref=r||(!ms.none&&ms.r);
+    let msg="必要断面積 "+fmt(am,2)+" mm² 以上（簡易式）。";
+    if(ref&&ref.pct>o.allow*0.75&&ref.pct<=o.allow)msg+="許容値ぎりぎりです。正式式でも確認してください（正式式は導体温度を考慮するので大きめに出ます）。";
+    hint.textContent=msg;hint.hidden=false;
+  }
+  // table
+  const hvT=isHV();
+  const rows=listOf(type).map(s=>{const x=dropFor(mode,type,s,o);const a=ampFor(type,s.name,o);const aOk=a===null?true:ampOk(a,o.I);return {s,x,a,ok:x.pct<=o.allow+1e-9&&aOk}});
+  const dv=hvT?1:2;
+  $("sizeTable").innerHTML="<thead><tr><th>サイズ</th><th>降下 V</th><th>降下率</th>"+(hvT?"":"<th>許容電流</th>")+"<th>判定</th></tr></thead><tbody>"+
+    rows.map(({s,x,a,ok})=>`<tr class="${s.name===szName?"sel":""}"><td>${s.name}${s.name.endsWith("mm")?"":"sq"}</td><td class="num">${fmt(x.e,dv)}</td><td class="num">${fmt(x.pct,2)}%</td>${hvT?"":`<td class="num">${a.none?"—":a.A+"A"}</td>`}<td class="${ok?"ok":"ng"}">${ok?"OK":"NG"}</td></tr>`).join("")+"</tbody>";
+  let basis;
+  if(mode==="simple")basis="簡易式 e = "+SYSTEMS[o.sys].kS+" × L × I ÷ (1000 × A)。基準電圧 "+SYSTEMS[o.sys].base+"V";
+  else{
+    const k=mode==="hv"?"√3":({2:"2",1:"1"}[SYSTEMS[o.sys].kF]||"√3");
+    const ex=sz?rx(type,sz,o):(!ms.none?rx(ms.type,ms.sz,o):null);
+    basis="正式式 e = "+k+" × I × L × (R cosθ + X sinθ)。力率 "+o.pf+"、"+o.freq+"Hz、導体 "+(ex?ex.t:"")+"℃"+(ex?"、R = "+fmt(ex.R,4)+" Ω/km、X = "+fmt(ex.X,4)+" Ω/km（"+(sz?sz.name:ms.sz.name)+"）":"");
+  }
+  if(!hvT){const a0=ampFor(type,listOf(type)[0].name,o);basis+="。許容電流は "+condLabel(type,o,a0)+(type==="VVF"?"（IV電線の値×電流減少係数 "+WIRES[o.wires].f+"）":"（JCS 0168-2、1条布設）");}
+  $("basis").textContent=basis;
+  last={o,type,mode,sz,r,ms,minLabel,basis};
+}
+
+function condLabel(type,o,a){
+  const th=a&&a.th!=null?a.th:(o.amb==="base"?(type==="VVF"?30:40):o.amb);
+  return (type==="VVF"?"VVF・同一管内"+WIRES[o.wires].label:AMP_COL[a?a.col:type]+"・"+INST[o.inst])+"・"+th+"℃";
+}
+function set(p){Object.assign(st,p);firstRun=false;store.set("vd.state",st);renderControls();compute();}
+
+// inputs
+document.querySelectorAll(".modes button").forEach(b=>b.addEventListener("click",()=>set({mode:b.dataset.mode})));
+document.querySelectorAll("[data-hvin]").forEach(b=>b.addEventListener("click",()=>{
+  const v=b.dataset.hvin; if(v===st.hvIn)return;
+  const cur=numIn(st.hvLoad); let nv=st.hvLoad;
+  if(Number.isFinite(cur))nv=v==="amp"?hvCurrent(cur).toFixed(1):(cur*Math.sqrt(3)*6.6).toFixed(0);
+  set({hvIn:v,hvLoad:nv});
+}));
+$("inI").addEventListener("input",e=>{firstRun=false;$("exampleNote").hidden=true;if(isHV())st.hvLoad=e.target.value;else st.I=e.target.value;store.set("vd.state",st);compute();});
+$("inL").addEventListener("input",e=>{firstRun=false;$("exampleNote").hidden=true;if(isHV())st.hvL=e.target.value;else st.L=e.target.value;store.set("vd.state",st);compute();});
+$("inI").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("inL").focus();}});
+$("inL").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}});
+$("inI").addEventListener("focus",e=>e.target.select());
+$("inL").addEventListener("focus",e=>e.target.select());
+$("inSite").addEventListener("input",e=>{st.site=e.target.value;store.set("vd.state",st)});
+$("inCircuit").addEventListener("input",e=>{st.circuit=e.target.value;store.set("vd.state",st)});
+
+// saving
+const MODE_LABEL={simple:"低圧簡易",formal:"低圧正式",hv:"高圧6.6kV"};
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2200);}
+$("btnSave").addEventListener("click",()=>{
+  if(!last){toast("電流とこう長を入れてから保存してください");return;}
+  const {o,type,mode,sz,r,ms,minLabel}=last, hv=mode==="hv";
+  const d=new Date(), pad=n=>String(n).padStart(2,"0");
+  const sys=hv?{label:"三相3線",v:"6600V"}:SYSTEMS[o.sys];
+  const ref=r||(!ms.none?ms.r:null);
+  const t=ref&&ref.t;
+  saved.unshift({
+    id:Date.now(),
+    date:`${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    site:st.site.trim(),circuit:st.circuit.trim(),mode:MODE_LABEL[mode],
+    sys:sys.label,volt:sys.v,
+    load:hv&&st.hvIn==="kva"?numIn(st.hvLoad)+"kVA":"",current:fmt(o.I,1),
+    L:o.L,cable:DATA[type].label,size:sz?sz.name:"（未選択）",
+    pf:mode==="simple"?"":o.pf,freq:mode==="simple"?"":o.freq,temp:mode==="simple"?"":(t??""),
+    allow:o.allow,e:ref?fmt(ref.e,hv?1:2):"",pct:ref?fmt(ref.pct,2):"",
+    inst:hv?"":condLabel(type,o,r&&r.a),
+    amp:r&&r.a&&!r.a.none?r.a.A:"",
+    judge:r?((r.dOk&&r.aOk!==false)?"OK":"NG"+(!r.dOk?"（電圧降下）":"")+(r.aOk===false?"（許容電流）":"")):"",minSize:minLabel
+  });
+  store.set("vd.saved",saved);renderHist();toast("保存しました");
+});
+const COLS=[["date","日時"],["site","現場名"],["circuit","回路名"],["mode","計算方式"],["sys","配電方式"],["volt","電圧"],["load","負荷容量"],["current","電流A"],["L","こう長m"],["cable","ケーブル"],["size","サイズ"],["pf","力率"],["freq","周波数Hz"],["temp","導体温度℃"],["allow","許容%"],["e","電圧降下V"],["pct","降下率%"],["inst","布設条件"],["amp","許容電流A"],["judge","判定"],["minSize","最小サイズ"]];
+function recText(x){
+  const lines=[`【${x.site||"現場名なし"}${x.circuit?"／"+x.circuit:""}】${x.date}`,
+    `${x.mode}　${x.sys} ${x.volt}　${x.load?x.load+"（"+x.current+"A）":x.current+"A"}　こう長${x.L}m`,
+    `${x.cable} ${x.size}${x.pf!==""?"　力率"+x.pf+"・"+x.freq+"Hz・"+x.temp+"℃":""}`,
+    x.judge?`電圧降下 ${x.e}V（${x.pct}%）許容${x.allow}%${x.amp!==""&&x.amp!=null?`　許容電流 ${x.amp}A（${x.inst}）`:""} → ${x.judge}`:`許容${x.allow}%`,
+    `条件を満たす最小サイズ：${x.minSize}`];
+  return lines.join("\n");
+}
+async function copy(text,what){
+  const box=$("copyBox");
+  try{await navigator.clipboard.writeText(text);box.hidden=true;toast(what+"をコピーしました");}
+  catch(e){box.hidden=false;box.value=text;box.focus();box.select();toast("自動コピーできないので、下の枠を長押ししてコピーしてください");}
+}
+$("btnCopyTsv").addEventListener("click",()=>{
+  if(!saved.length){toast("保存した結果がありません");return;}
+  const tsv=[COLS.map(c=>c[1]).join("\t"),...saved.map(x=>COLS.map(c=>String(x[c[0]]??"").replace(/\t|\n/g," ")).join("\t"))].join("\n");
+  copy(tsv,saved.length+"件の表");
+});
+$("btnCopyText").addEventListener("click",()=>{
+  if(!saved.length){toast("保存した結果がありません");return;}
+  copy(saved.map(recText).join("\n\n"),saved.length+"件の報告文");
+});
+let clearArmed=false;
+$("btnClear").addEventListener("click",()=>{
+  if(!clearArmed){clearArmed=true;$("btnClear").textContent="もう一度押すと全件消えます";setTimeout(()=>{clearArmed=false;$("btnClear").textContent="保存した結果をすべて消す"},4000);return;}
+  saved=[];store.set("vd.saved",saved);clearArmed=false;$("btnClear").textContent="保存した結果をすべて消す";renderHist();toast("すべて消しました");
+});
+const APP_URL=location.origin+location.pathname.replace(/index\.html$/,"");
+// LINEの「テキストを送る」URL。タップするとLINEが開き、送り先を選べる
+const lineUrl=t=>"https://line.me/R/msg/text/?"+encodeURIComponent(t);
+$("lineApp").href=lineUrl("電圧降下の現場計算アプリです\n"+APP_URL);
+function renderHist(){
+  const list=$("histList");list.innerHTML="";
+  $("histCount").textContent=saved.length?saved.length+"件":"";
+  $("histBtns").hidden=!saved.length;
+  $("lineAll").href=lineUrl(saved.map(recText).join("\n\n"));$("btnClear").hidden=!saved.length;
+  if(!saved.length){list.innerHTML='<p class="empty">まだありません。上の「この結果を保存」で、日時・条件・結果がここに残ります。</p>';$("copyBox").hidden=true;return;}
+  saved.forEach(x=>{
+    const el=document.createElement("div");el.className="rec";
+    el.innerHTML=`<div class="rec-head"><b></b><span class="rec-meta num">${x.date}</span></div>
+      <div class="rec-meta">${x.mode}・${x.sys} ${x.volt}・${x.load||x.current+"A"}・${x.L}m・${x.cable} ${x.size}</div>
+      <div class="num">${x.judge?`${x.pct}%（${x.e}V）<span class="j-${x.judge.startsWith("OK")?"ok":"ng"}">${x.judge}</span>　`:""}最小 ${x.minSize}</div>
+      <div class="btns"><button class="btn sub" data-a="copy">コピー</button><a class="btn line" data-a="line" target="_blank" rel="noopener">LINE</a><button class="btn danger" data-a="del">削除</button></div>`;
+    el.querySelector("b").textContent=(x.site||"現場名なし")+(x.circuit?"／"+x.circuit:"");
+    el.querySelector('[data-a="copy"]').addEventListener("click",()=>copy(recText(x),"報告文"));
+    el.querySelector('[data-a="line"]').href=lineUrl(recText(x));
+    const del=el.querySelector('[data-a="del"]');let armed=false;
+    del.addEventListener("click",()=>{
+      if(!armed){armed=true;del.textContent="もう一度で削除";setTimeout(()=>{armed=false;del.textContent="削除"},3000);return;}
+      saved=saved.filter(y=>y.id!==x.id);store.set("vd.saved",saved);renderHist();toast("削除しました");
+    });
+    list.appendChild(el);
+  });
+}
+renderControls();compute();renderHist();
+try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{})}catch(e){}
+</script>
+
+<script>
+// 電波のない場所でも起動できるように、一度開いたらスマホに保存しておく
+if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
