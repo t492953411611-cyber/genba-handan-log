@@ -106,7 +106,6 @@ td.ok{color:var(--ok);font-weight:700} td.ng{color:var(--ng);font-weight:700}
 .btns .btn{flex:1 1 140px}
 a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 .btn.line{background:#06C755;border-color:#06C755;color:#fff}
-.share{display:flex;flex-direction:column;gap:8px}
 .hist{display:flex;flex-direction:column;gap:10px}
 .rec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
 .rec-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
@@ -240,10 +239,6 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <textarea class="copybox" id="copyBox" readonly hidden></textarea>
     <div id="histList"></div>
     <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
-  </section>
-
-  <section class="share">
-    <a class="btn line" id="lineApp" target="_blank" rel="noopener">このアプリをLINEで送る</a>
   </section>
 
   <p class="foot">試作版 v0.2。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流はまだ入っていません。ケーブルの抵抗はJIS規格の記憶値、リアクタンスは推定値です（メーカー表と照合予定）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
@@ -568,10 +563,8 @@ $("btnClear").addEventListener("click",()=>{
   if(!clearArmed){clearArmed=true;$("btnClear").textContent="もう一度押すと全件消えます";setTimeout(()=>{clearArmed=false;$("btnClear").textContent="保存した結果をすべて消す"},4000);return;}
   saved=[];store.set("vd.saved",saved);clearArmed=false;$("btnClear").textContent="保存した結果をすべて消す";renderHist();toast("すべて消しました");
 });
-const APP_URL=location.origin+location.pathname.replace(/index\.html$/,"");
 // LINEの「テキストを送る」URL。タップするとLINEが開き、送り先を選べる
 const lineUrl=t=>"https://line.me/R/msg/text/?"+encodeURIComponent(t);
-$("lineApp").href=lineUrl("電圧降下の現場計算アプリです\n"+APP_URL);
 function renderHist(){
   const list=$("histList");list.innerHTML="";
   $("histCount").textContent=saved.length?saved.length+"件":"";
