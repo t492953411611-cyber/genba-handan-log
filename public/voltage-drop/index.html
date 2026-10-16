@@ -134,7 +134,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
       </div>
       <div class="badge" id="rBadge">--</div>
       <div class="res-sub num res-amp" id="rAmp" hidden></div>
-      <div class="res-min"><span class="res-sub"><span id="rMinLbl">降下</span><span id="rAllow" class="num">2</span>%以内<span id="rMinAmp">・許容電流OK</span>の最小</span><b id="rMin">--</b><span class="res-sub num" id="rMinPct"></span></div>
+      <div class="res-min"><span class="res-sub"><span id="rMinLbl">降下</span><span id="rAllow" class="num">2</span>%以内<span id="rMinAmp">・許容電流OK</span><span id="rMinSc" hidden>・短絡OK</span>の最小</span><b id="rMin">--</b><span class="res-sub num" id="rMinPct"></span></div>
     </div>
   </section>
 
@@ -194,6 +194,19 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <div class="chips" id="allowChips"></div>
   </div>
 
+  <div class="group" id="g-sc" hidden>
+    <div class="label">短絡電流（受電点。電力会社の提示値）</div>
+    <div class="row2">
+      <div class="field">
+        <div class="inbox"><input id="inSc" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="短絡電流"><span>kA</span></div>
+      </div>
+      <div class="basis" style="align-self:center">わからないときは 12.5kA（高圧受電の遮断器でよく使う定格）で確認</div>
+    </div>
+    <div class="chips" id="scChips"></div>
+    <div class="label">遮断時間（短絡が流れ続ける時間）</div>
+    <div class="chips" id="tsChips"></div>
+  </div>
+
   <div id="hint" class="note" hidden></div>
 
   <details id="advanced">
@@ -241,7 +254,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
   </section>
 
-  <p class="foot">試作版 v0.2。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流はまだ入っていません。ケーブルの抵抗はJIS規格の記憶値、リアクタンスは推定値です（メーカー表と照合予定）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
+  <p class="foot">試作版 v0.3。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗はJIS規格の記憶値、リアクタンスは推定値です（メーカー表と照合予定）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -325,15 +338,15 @@ function dropFor(mode,type,sz,o){
   return {e,pct:e/6600*100,base:6600,vs:6600,R,X,t};
 }
 // 最小サイズ: 電圧降下が許容内、かつ（低圧は）許容電流 ≧ 負荷電流。選択種類で不可なら VVF→CV で探す
-// by: "drop"=電圧降下で決まった / "amp"=許容電流で決まった
+// by: "drop"=電圧降下で決まった / "amp"=許容電流で決まった / "sc"=短絡強度で決まった（高圧）
 function minSize(mode,type,o){
   const tryType=tp=>{
     let dropOnly=null;
     for(const sz of listOf(tp)){
       const r=dropFor(mode,tp,sz,o), dOk=r.pct<=o.allow+1e-9;
       if(dOk&&!dropOnly)dropOnly=sz.name;
-      const a=ampFor(tp,sz.name,o);
-      if(dOk&&(a===null||ampOk(a,o.I)))return {type:tp,sz,r,a,by:dropOnly===sz.name?"drop":"amp"};
+      const a=ampFor(tp,sz.name,o), sc=mode==="hv"?scFor(sz,o):null;
+      if(dOk&&(a===null||ampOk(a,o.I))&&(!sc||sc.ok))return {type:tp,sz,r,a,sc,by:dropOnly===sz.name?"drop":(mode==="hv"?"sc":"amp")};
     }
     return null;
   };
@@ -345,12 +358,20 @@ function minSize(mode,type,o){
 // 簡易式の必要断面積
 function areaMin(o){const s=SYSTEMS[o.sys];const eA=s.base*o.allow/100;return s.kS*o.L*o.I/(1000*eA);}
 function hvCurrent(kva){return kva/(Math.sqrt(3)*6.6);}
+// 短絡時の熱的強度（断熱式）: I²t ≦ (K·A)²。CV・CVT（架橋ポリエチレン、銅）導体90℃→短絡時230℃で K=134
+const SC_K=134;
+// 戻り値 {kA:このサイズが耐えられる短絡電流, need:必要断面積, ok}。短絡電流が未入力なら null
+function scFor(sz,o){
+  if(!(o.isc>0)||!(o.ts>0))return null;
+  const kA=SC_K*sz.area/Math.sqrt(o.ts)/1000, need=o.isc*1000*Math.sqrt(o.ts)/SC_K;
+  return {kA,need,ok:sz.area>=need-1e-9};
+}
 </script>
 
 <script>
 const $=id=>document.getElementById(id);
 const DEF={mode:"simple",sys:"3p3w200",I:"50",L:"80",type:"CV",size:"22",inst:"air",wires:"3",amb:"base",pf:0.9,allow:2,freq:60,temp:"auto",
-  hvIn:"kva",hvLoad:"500",hvL:"1200",hvSize:"",hvAllow:2,hvPf:0.9,site:"",circuit:""};
+  hvIn:"kva",hvLoad:"500",hvL:"1200",hvSize:"",hvAllow:2,hvPf:0.9,hvIsc:"12.5",hvTs:0.2,site:"",circuit:""};
 let st={...DEF}, saved=[], firstRun=true;
 const store={
   get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
@@ -377,7 +398,7 @@ function opts(){
   const hv=isHV();
   let I,L=numIn(hv?st.hvL:st.L);
   if(hv){const v=numIn(st.hvLoad);I=st.hvIn==="kva"?hvCurrent(v):v;}else I=numIn(st.I);
-  return {mode:st.mode,sys:st.sys,I,L,pf:hv?st.hvPf:st.pf,allow:hv?st.hvAllow:st.allow,freq:st.freq,temp:st.temp,inst:st.inst,wires:st.wires,amb:st.amb};
+  return {mode:st.mode,sys:st.sys,I,L,pf:hv?st.hvPf:st.pf,allow:hv?st.hvAllow:st.allow,freq:st.freq,temp:st.temp,inst:st.inst,wires:st.wires,amb:st.amb,isc:hv?numIn(st.hvIsc):NaN,ts:st.hvTs};
 }
 function curSizeName(){return isHV()?st.hvSize:st.size}
 
@@ -389,7 +410,10 @@ function renderControls(){
   $("advanced").hidden=st.mode==="simple";
   chipRow($("sysChips"),Object.entries(SYSTEMS).map(([k,s])=>({value:k,html:s.label+"<small>"+s.v+"</small>"})),st.sys,v=>set({sys:v}));
   chipRow($("typeChips"),[{value:"CV",html:"CV<small>多心</small>"},{value:"CVT",label:"CVT"},{value:"VVF",label:"VVF"}],st.type,v=>set({type:v,size:""}));
-  $("g-inst").hidden=hv;
+  $("g-inst").hidden=hv; $("g-sc").hidden=!hv;
+  chipRow($("scChips"),["8","12.5","20"].map(v=>({value:v,html:v+"<small>kA</small>"})),st.hvIsc,v=>set({hvIsc:v}));
+  chipRow($("tsChips"),[0.1,0.2,0.3,0.5].map(v=>({value:v,html:v+"<small>秒</small>"})),st.hvTs,v=>set({hvTs:v}));
+  if(document.activeElement!==$("inSc"))$("inSc").value=st.hvIsc;
   const vvf=st.type==="VVF";
   $("instLabel").textContent=vvf?"同じ管に入れる電線の本数（ころがしは3本以下）":"布設条件";
   if(vvf)chipRow($("instChips"),Object.entries(WIRES).map(([k,w])=>({value:k,label:w.label})),st.wires,v=>set({wires:v}));
@@ -425,7 +449,7 @@ function compute(){
   const o=opts(), type=cableType(), mode=st.mode;
   const box=$("resMain"); box.className="res-main idle";
   $("rAllow").textContent=o.allow;
-  $("rMinAmp").hidden=isHV(); $("rAmp").hidden=true;
+  $("rMinAmp").hidden=isHV(); $("rMinSc").hidden=!(isHV()&&o.isc>0); $("rAmp").hidden=true;
   $("hvCurrent").hidden=!(isHV()&&st.hvIn==="kva");
   if(isHV()&&st.hvIn==="kva")$("hvCurrent").textContent=Number.isFinite(o.I)?"負荷電流 I = S ÷ (√3 × 6.6kV) = "+fmt(o.I,1)+" A":"";
   last=null;
@@ -434,7 +458,7 @@ function compute(){
     $("rMin").textContent="--";$("rMinPct").textContent="";$("sizeTable").innerHTML="";$("hint").hidden=true;$("basis").textContent="";return;
   }
   const ms=minSize(mode,type,o);
-  const minLabel=ms.none?(type==="VVF"?"CVでも325sq超":"325sq超（並列などを検討）"):(DATA[ms.type].label+" "+ms.sz.name+(ms.sz.name.endsWith("mm")?"":"sq")+(ms.by==="amp"?"（許容電流で決定）":""));
+  const minLabel=ms.none?(type==="VVF"?"CVでも325sq超":"325sq超（並列などを検討）"):(DATA[ms.type].label+" "+ms.sz.name+(ms.sz.name.endsWith("mm")?"":"sq")+(ms.by==="amp"?"（許容電流で決定）":ms.by==="sc"?"（短絡強度で決定）":""));
   $("rMin").textContent=minLabel;
   $("rMinPct").textContent=ms.none?"":fmt(ms.r.pct,2)+"%（"+fmt(ms.r.e,ms.r.base>1000?1:2)+"V）"+(ms.fallback?"　VVFでは不可":"");
   const szName=curSizeName(), sz=szName?sizeOf(type,szName):null;
@@ -444,12 +468,19 @@ function compute(){
     const dOk=r.pct<=o.allow+1e-9;
     const a=ampFor(type,sz.name,o);
     r.a=a; r.aOk=a===null?null:ampOk(a,o.I); r.dOk=dOk;
-    const ok=dOk&&r.aOk!==false;
+    r.sc=isHV()?scFor(sz,o):null; r.scOk=r.sc?r.sc.ok:null;
+    const ok=dOk&&r.aOk!==false&&r.scOk!==false;
     box.className="res-main "+(ok?"ok":"ng");
     $("rPct").textContent=fmt(r.pct,2)+"%";
     const dv=r.base>1000?1:2;
     $("rSub").textContent=DATA[type].label+" "+sz.name+(sz.name.endsWith("mm")?"":"sq")+"　降下 "+fmt(r.e,dv)+"V　受電端 "+fmt(r.vs-r.e,dv)+"V";
     $("rBadge").textContent=ok?"OK":"NG";
+    if(isHV()){
+      const ra=$("rAmp");ra.hidden=false;
+      const j=(f,t)=>"<b class=\""+(f?"ok":"ng")+"\">"+t+(f?" OK":" NG")+"</b>";
+      ra.innerHTML=j(dOk,"電圧降下")+"　"+(r.sc?j(r.sc.ok,"短絡")+"（"+sz.name+"sqは"+fmt(r.sc.kA,1)+"kAまで"+(r.sc.ok?" ≧ ":" ＜ ")+fmt(o.isc,1)+"kA・"+o.ts+"秒）":"短絡：短絡電流を入れてください")+
+        (r.sc?(ok?"<br>→ <b class=\"ok\">このケーブルは使用可</b>":"<br>→ <b class=\"ng\">このケーブルは使用不可</b>"):"");
+    }
     if(a){
       const ra=$("rAmp");ra.hidden=false;
       ra.innerHTML=a.none?"許容電流：このサイズの電線管布設のデータがありません":
@@ -468,13 +499,16 @@ function compute(){
     let msg="必要断面積 "+fmt(am,2)+" mm² 以上（簡易式）。";
     if(ref&&ref.pct>o.allow*0.75&&ref.pct<=o.allow)msg+="許容値ぎりぎりです。正式式でも確認してください（正式式は導体温度を考慮するので大きめに出ます）。";
     hint.textContent=msg;hint.hidden=false;
+  }else if(mode==="hv"){
+    hint.textContent=o.isc>0?"短絡に耐える必要断面積 "+fmt(o.isc*1000*Math.sqrt(o.ts)/SC_K,1)+" mm² 以上（"+fmt(o.isc,1)+"kA・"+o.ts+"秒）。短絡電流は電力会社に確認した値に打ち替えてください。":"短絡電流を入れると、短絡時の熱的強度も確認します。";
+    hint.hidden=false;
   }
   // table
   const hvT=isHV();
-  const rows=listOf(type).map(s=>{const x=dropFor(mode,type,s,o);const a=ampFor(type,s.name,o);const aOk=a===null?true:ampOk(a,o.I);return {s,x,a,ok:x.pct<=o.allow+1e-9&&aOk}});
+  const rows=listOf(type).map(s=>{const x=dropFor(mode,type,s,o);const a=ampFor(type,s.name,o);const aOk=a===null?true:ampOk(a,o.I);const sc=hvT?scFor(s,o):null;return {s,x,a,sc,ok:x.pct<=o.allow+1e-9&&aOk&&(!sc||sc.ok)}});
   const dv=hvT?1:2;
-  $("sizeTable").innerHTML="<thead><tr><th>サイズ</th><th>降下 V</th><th>降下率</th>"+(hvT?"":"<th>許容電流</th>")+"<th>判定</th></tr></thead><tbody>"+
-    rows.map(({s,x,a,ok})=>`<tr class="${s.name===szName?"sel":""}"><td>${s.name}${s.name.endsWith("mm")?"":"sq"}</td><td class="num">${fmt(x.e,dv)}</td><td class="num">${fmt(x.pct,2)}%</td>${hvT?"":`<td class="num">${a.none?"—":a.A+"A"}</td>`}<td class="${ok?"ok":"ng"}">${ok?"OK":"NG"}</td></tr>`).join("")+"</tbody>";
+  $("sizeTable").innerHTML="<thead><tr><th>サイズ</th><th>降下 V</th><th>降下率</th>"+(hvT?"<th>短絡耐量</th>":"<th>許容電流</th>")+"<th>判定</th></tr></thead><tbody>"+
+    rows.map(({s,x,a,sc,ok})=>`<tr class="${s.name===szName?"sel":""}"><td>${s.name}${s.name.endsWith("mm")?"":"sq"}</td><td class="num">${fmt(x.e,dv)}</td><td class="num">${fmt(x.pct,2)}%</td>${hvT?`<td class="num${sc?(sc.ok?"":" ng"):""}">${sc?fmt(sc.kA,1)+"kA":"—"}</td>`:`<td class="num">${a.none?"—":a.A+"A"}</td>`}<td class="${ok?"ok":"ng"}">${ok?"OK":"NG"}</td></tr>`).join("")+"</tbody>";
   let basis;
   if(mode==="simple")basis="簡易式 e = "+SYSTEMS[o.sys].kS+" × L × I ÷ (1000 × A)。基準電圧 "+SYSTEMS[o.sys].base+"V";
   else{
@@ -482,6 +516,7 @@ function compute(){
     const ex=sz?rx(type,sz,o):(!ms.none?rx(ms.type,ms.sz,o):null);
     basis="正式式 e = "+k+" × I × L × (R cosθ + X sinθ)。力率 "+o.pf+"、"+o.freq+"Hz、導体 "+(ex?ex.t:"")+"℃"+(ex?"、R = "+fmt(ex.R,4)+" Ω/km、X = "+fmt(ex.X,4)+" Ω/km（"+(sz?sz.name:ms.sz.name)+"）":"");
   }
+  if(hvT)basis+="。短絡強度は A ≧ Is × √t ÷ "+SC_K+"（CV・CVT、導体90℃→短絡時230℃）"+(o.isc>0?"、Is = "+fmt(o.isc,1)+"kA、t = "+o.ts+"秒":"");
   if(!hvT){const a0=ampFor(type,listOf(type)[0].name,o);basis+="。許容電流は "+condLabel(type,o,a0)+(type==="VVF"?"（IV電線の値×電流減少係数 "+WIRES[o.wires].f+"）":"（JCS 0168-2、1条布設）");}
   $("basis").textContent=basis;
   last={o,type,mode,sz,r,ms,minLabel,basis};
@@ -507,6 +542,10 @@ $("inI").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$
 $("inL").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}});
 $("inI").addEventListener("focus",e=>e.target.select());
 $("inL").addEventListener("focus",e=>e.target.select());
+$("inSc").addEventListener("input",e=>{firstRun=false;$("exampleNote").hidden=true;st.hvIsc=e.target.value;store.set("vd.state",st);
+  $("scChips").querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed",String(b.textContent.replace("kA","")===e.target.value)));compute();});
+$("inSc").addEventListener("focus",e=>e.target.select());
+$("inSc").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}});
 $("inSite").addEventListener("input",e=>{st.site=e.target.value;store.set("vd.state",st)});
 $("inCircuit").addEventListener("input",e=>{st.circuit=e.target.value;store.set("vd.state",st)});
 
@@ -531,16 +570,17 @@ $("btnSave").addEventListener("click",()=>{
     allow:o.allow,e:ref?fmt(ref.e,hv?1:2):"",pct:ref?fmt(ref.pct,2):"",
     inst:hv?"":condLabel(type,o,r&&r.a),
     amp:r&&r.a&&!r.a.none?r.a.A:"",
-    judge:r?((r.dOk&&r.aOk!==false)?"OK":"NG"+(!r.dOk?"（電圧降下）":"")+(r.aOk===false?"（許容電流）":"")):"",minSize:minLabel
+    isc:hv&&o.isc>0?fmt(o.isc,1):"",ts:hv&&o.isc>0?o.ts:"",scKA:r&&r.sc?fmt(r.sc.kA,1):"",
+    judge:r?((r.dOk&&r.aOk!==false&&r.scOk!==false)?"OK":"NG"+(!r.dOk?"（電圧降下）":"")+(r.aOk===false?"（許容電流）":"")+(r.scOk===false?"（短絡強度）":"")):"",minSize:minLabel
   });
   store.set("vd.saved",saved);renderHist();toast("保存しました");
 });
-const COLS=[["date","日時"],["site","現場名"],["circuit","回路名"],["mode","計算方式"],["sys","配電方式"],["volt","電圧"],["load","負荷容量"],["current","電流A"],["L","こう長m"],["cable","ケーブル"],["size","サイズ"],["pf","力率"],["freq","周波数Hz"],["temp","導体温度℃"],["allow","許容%"],["e","電圧降下V"],["pct","降下率%"],["inst","布設条件"],["amp","許容電流A"],["judge","判定"],["minSize","最小サイズ"]];
+const COLS=[["date","日時"],["site","現場名"],["circuit","回路名"],["mode","計算方式"],["sys","配電方式"],["volt","電圧"],["load","負荷容量"],["current","電流A"],["L","こう長m"],["cable","ケーブル"],["size","サイズ"],["pf","力率"],["freq","周波数Hz"],["temp","導体温度℃"],["allow","許容%"],["e","電圧降下V"],["pct","降下率%"],["inst","布設条件"],["amp","許容電流A"],["isc","短絡電流kA"],["ts","遮断時間s"],["scKA","短絡耐量kA"],["judge","判定"],["minSize","最小サイズ"]];
 function recText(x){
   const lines=[`【${x.site||"現場名なし"}${x.circuit?"／"+x.circuit:""}】${x.date}`,
     `${x.mode}　${x.sys} ${x.volt}　${x.load?x.load+"（"+x.current+"A）":x.current+"A"}　こう長${x.L}m`,
     `${x.cable} ${x.size}${x.pf!==""?"　力率"+x.pf+"・"+x.freq+"Hz・"+x.temp+"℃":""}`,
-    x.judge?`電圧降下 ${x.e}V（${x.pct}%）許容${x.allow}%${x.amp!==""&&x.amp!=null?`　許容電流 ${x.amp}A（${x.inst}）`:""} → ${x.judge}`:`許容${x.allow}%`,
+    x.judge?`電圧降下 ${x.e}V（${x.pct}%）許容${x.allow}%${x.amp!==""&&x.amp!=null?`　許容電流 ${x.amp}A（${x.inst}）`:""}${x.scKA?`　短絡耐量 ${x.scKA}kA（短絡${x.isc}kA・${x.ts}秒）`:""} → ${x.judge}`:`許容${x.allow}%`,
     `条件を満たす最小サイズ：${x.minSize}`];
   return lines.join("\n");
 }
