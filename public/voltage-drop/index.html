@@ -192,6 +192,25 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 
   <div class="group">
     <div class="label">許容電圧降下率</div>
+    <div class="seg" role="group" id="amSeg">
+      <button data-am="rule">内線規程で決める</button>
+      <button data-am="manual">数字で選ぶ</button>
+    </div>
+    <div class="group" id="ruleBox">
+      <div class="chips" id="segChips"></div>
+      <div class="chips" id="supChips"></div>
+      <div class="row2">
+        <div class="field">
+          <label class="label" for="inFar">最遠端までのこう長</label>
+          <div class="inbox"><input id="inFar" inputmode="decimal" autocomplete="off" placeholder="上と同じ"><span>m</span></div>
+        </div>
+        <div class="field" id="f-other">
+          <label class="label" for="inOther" id="lblOther">分岐側の降下</label>
+          <div class="inbox"><input id="inOther" inputmode="decimal" autocomplete="off"><span>%</span></div>
+        </div>
+      </div>
+      <div class="note" id="ruleText"></div>
+    </div>
     <div class="chips" id="allowChips"></div>
   </div>
 
@@ -237,6 +256,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
   <details id="srcBox">
     <summary>計算の根拠と出典</summary>
     <div class="dbody src">
+      <p><b>許容電圧降下率（内線規程 1310-1）</b><br>供給点（引込線取付点、または構内の変圧器の二次側）から最遠端の負荷までのこう長が60m以下なら、幹線・分岐回路とも2%以下（構内の変圧器から供給する場合、幹線は3%以下）。60mを超える場合は幹線と分岐の合計で、120m以下 4%（変圧器から5%）、200m以下 5%（6%）、200m超 6%（7%）以下。電灯・動力の区別はなく、同じ値です。幹線だけ・分岐だけを計算するときは、合計からもう一方の降下の見込み（初期値2%）を引いた値で判定します。</p>
       <p><b>電圧降下の式</b><br>正式式・高圧：e = K × I × L × (R cosθ + X sinθ)。K は単相2線 2、単相3線 1、三相3線 √3。フジクラ・ダイヤケーブル技術資料「電圧降下」と同じ式です。<br>簡易式：内線規程の e = 35.6 / 17.8 / 30.8 × L × I ÷ (1000 × A)。</p>
       <p><b>導体抵抗（20℃）</b><br>JIS C 3605（600V CV）・JIS C 3606（6600V CV）の最大導体抵抗。フジクラ・ダイヤケーブルのカタログ・仕様書（600V CV、6600V CVT SES-00101）の値と一致します。</p>
       <p><b>交流抵抗とリアクタンス（低圧 CV・CVT・VVF）</b><br>導体温度90℃（VVFは60℃）の表の値をそのまま使っています（リアクタンスは50Hz・60Hzそれぞれの値、交流抵抗は60Hzの値）。日本電線工業会 技資第103号B「低圧電線・ケーブルのインピーダンス」（2024年6月）、古河電工「電設資材ガイド」、矢崎 電線要覧「常数篇」の3資料で一致。フジクラ・ダイヤケーブルの計算例（600V CVT 38sq、50Hz：R 0.626、X 0.0955 Ω/km）とも一致します。CVは2心・3心の値、VVFは単相2線で2心、それ以外で3心の値です。</p>
@@ -278,7 +298,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
   </section>
 
-  <p class="foot">試作版 v0.4。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
+  <p class="foot">試作版 v0.5。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -391,6 +411,24 @@ function minSize(mode,type,o){
 }
 // 簡易式の必要断面積
 function areaMin(o){const s=SYSTEMS[o.sys];const eA=s.base*o.allow/100;return s.kS*o.L*o.I/(1000*eA);}
+// 内線規程 1310-1 の許容電圧降下（低圧配線）
+// こう長60m以下: 幹線・分岐とも2%以下（構内の変圧器から供給する場合、幹線は3%以下）
+// 60m超: 幹線＋分岐の合計で 120m以下 4%(5%)、200m以下 5%(6%)、200m超 6%(7%)。( )は構内の変圧器から供給
+// far = 供給点（引込線取付点、または構内変圧器の二次側）から最遠端の負荷までのこう長
+const RULE_SEG={main:"幹線",branch:"分岐回路",thru:"通し"};
+const RULE_SUP={lv:"低圧で受電",tr:"構内の変圧器から"};
+function ruleAllow(seg,sup,far,other){
+  const tr=sup==="tr";
+  if(far<=60){
+    const a=seg==="branch"?2:(tr?3:2);
+    return {allow:a,text:"最遠端 "+far+"m（60m以下）の"+RULE_SEG[seg].replace("通し","幹線")+"は "+a+"%以下"};
+  }
+  const band=far<=120?"120m以下":far<=200?"200m以下":"200m超";
+  const tot=(far<=120?4:far<=200?5:6)+(tr?1:0);
+  if(seg==="thru")return {allow:tot,text:"最遠端 "+far+"m（"+band+"）は幹線＋分岐の合計で "+tot+"%以下"};
+  const a=Math.max(0,tot-other);
+  return {allow:a,text:"最遠端 "+far+"m（"+band+"）は合計 "+tot+"%以下。"+(seg==="main"?"分岐":"幹線")+"側の "+other+"% を引いて "+a+"%",split:true};
+}
 function hvCurrent(kva){return kva/(Math.sqrt(3)*6.6);}
 // 短絡時の熱的強度（断熱式）: I²t ≦ (K·A)²。CV・CVT（架橋ポリエチレン、銅）導体90℃→短絡時230℃で K=134
 const SC_K=134;
@@ -405,7 +443,7 @@ function scFor(sz,o){
 <script>
 const $=id=>document.getElementById(id);
 const DEF={mode:"simple",sys:"3p3w200",I:"50",L:"80",type:"CV",size:"22",inst:"air",wires:"3",amb:"base",pf:0.9,allow:2,freq:60,temp:"auto",
-  hvIn:"kva",hvLoad:"500",hvL:"1200",hvSize:"",hvAllow:2,hvPf:0.9,hvIsc:"12.5",hvTs:0.2,site:"",circuit:""};
+  am:"rule",rseg:"main",rsup:"lv",far:"",other:"2",hvIn:"kva",hvLoad:"500",hvL:"1200",hvSize:"",hvAllow:2,hvPf:0.9,hvIsc:"12.5",hvTs:0.2,site:"",circuit:""};
 let st={...DEF}, saved=[], firstRun=true;
 const store={
   get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
@@ -432,7 +470,12 @@ function opts(){
   const hv=isHV();
   let I,L=numIn(hv?st.hvL:st.L);
   if(hv){const v=numIn(st.hvLoad);I=st.hvIn==="kva"?hvCurrent(v):v;}else I=numIn(st.I);
-  return {mode:st.mode,sys:st.sys,I,L,pf:hv?st.hvPf:st.pf,allow:hv?st.hvAllow:st.allow,freq:st.freq,temp:st.temp,inst:st.inst,wires:st.wires,amb:st.amb,isc:hv?numIn(st.hvIsc):NaN,ts:st.hvTs};
+  let allow=hv?st.hvAllow:st.allow, rule=null;
+  if(!hv&&st.am==="rule"){
+    const far=numIn(st.far)||L, ot=parseFloat(String(st.other).replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)));
+    if(Number.isFinite(far)){rule=ruleAllow(st.rseg,st.rsup,far,Number.isFinite(ot)&&ot>=0?ot:2);allow=rule.allow;}
+  }
+  return {mode:st.mode,sys:st.sys,I,L,pf:hv?st.hvPf:st.pf,allow,rule,freq:st.freq,temp:st.temp,inst:st.inst,wires:st.wires,amb:st.amb,isc:hv?numIn(st.hvIsc):NaN,ts:st.hvTs};
 }
 function curSizeName(){return isHV()?st.hvSize:st.size}
 
@@ -461,6 +504,14 @@ function renderControls(){
   chipRow($("pfChips"),pfs,st.pf,v=>set({pf:v}));
   chipRow($("pfChips2"),pfs,st.hvPf,v=>set({hvPf:v}));
   chipRow($("allowChips"),[2,3,4,5,6,7].map(v=>({value:v,label:v+"%"})),hv?st.hvAllow:st.allow,v=>set(hv?{hvAllow:v}:{allow:v}));
+  const rule=!hv&&st.am==="rule";
+  $("amSeg").hidden=hv; $("ruleBox").hidden=!rule; $("allowChips").hidden=rule;
+  document.querySelectorAll("[data-am]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.am===st.am)));
+  chipRow($("segChips"),Object.entries(RULE_SEG).map(([k,l])=>({value:k,label:k==="thru"?"通し<small>引込口〜最遠端</small>":l,html:k==="thru"?"通し<small>引込口〜最遠端</small>":null})),st.rseg,v=>set({rseg:v}));
+  chipRow($("supChips"),Object.entries(RULE_SUP).map(([k,l])=>({value:k,label:l})),st.rsup,v=>set({rsup:v}));
+  if(document.activeElement!==$("inFar"))$("inFar").value=st.far;
+  if(document.activeElement!==$("inOther"))$("inOther").value=st.other;
+  $("lblOther").textContent=(st.rseg==="main"?"分岐":"幹線")+"側の降下（見込み）";
   chipRow($("freqChips"),[{value:60,label:"60Hz"},{value:50,label:"50Hz"}],st.freq,v=>set({freq:v}));
   const tmax=DATA[cableType()].tmax;
   chipRow($("tempChips"),[{value:"auto",html:"最高温度<small>"+tmax+"℃</small>"},...["20","60","75","90"].map(v=>({value:v,label:v+"℃"}))],st.temp,v=>set({temp:v}));
@@ -483,6 +534,9 @@ function compute(){
   const o=opts(), type=cableType(), mode=st.mode;
   const box=$("resMain"); box.className="res-main idle";
   $("rAllow").textContent=o.allow;
+  if(o.rule){$("ruleText").textContent="内線規程 1310-1："+RULE_SUP[st.rsup]+"、"+o.rule.text+"。";}
+  else if(!isHV()&&st.am==="rule")$("ruleText").textContent="こう長を入れると、内線規程の許容値を出します。";
+  $("f-other").hidden=!(o.rule&&o.rule.split);
   $("rMinAmp").hidden=isHV(); $("rMinSc").hidden=!(isHV()&&o.isc>0); $("rAmp").hidden=true;
   $("hvCurrent").hidden=!(isHV()&&st.hvIn==="kva");
   if(isHV()&&st.hvIn==="kva")$("hvCurrent").textContent=Number.isFinite(o.I)?"負荷電流 I = S ÷ (√3 × 6.6kV) = "+fmt(o.I,1)+" A":"";
@@ -580,6 +634,11 @@ $("inSc").addEventListener("input",e=>{firstRun=false;$("exampleNote").hidden=tr
   $("scChips").querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed",String(b.textContent.replace("kA","")===e.target.value)));compute();});
 $("inSc").addEventListener("focus",e=>e.target.select());
 $("inSc").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}});
+document.querySelectorAll("[data-am]").forEach(b=>b.addEventListener("click",()=>set({am:b.dataset.am})));
+["inFar","inOther"].forEach(id=>{const el=$(id),k=id==="inFar"?"far":"other";
+  el.addEventListener("input",e=>{firstRun=false;st[k]=e.target.value;store.set("vd.state",st);compute();});
+  el.addEventListener("focus",e=>e.target.select());
+  el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}});});
 $("inSite").addEventListener("input",e=>{st.site=e.target.value;store.set("vd.state",st)});
 $("inCircuit").addEventListener("input",e=>{st.circuit=e.target.value;store.set("vd.state",st)});
 
@@ -601,7 +660,7 @@ $("btnSave").addEventListener("click",()=>{
     load:hv&&st.hvIn==="kva"?numIn(st.hvLoad)+"kVA":"",current:fmt(o.I,1),
     L:o.L,cable:DATA[type].label,size:sz?sz.name:"（未選択）",
     pf:mode==="simple"?"":o.pf,freq:mode==="simple"?"":o.freq,temp:mode==="simple"?"":(t??""),
-    allow:o.allow,e:ref?fmt(ref.e,hv?1:2):"",pct:ref?fmt(ref.pct,2):"",
+    allow:o.allow,std:o.rule?"内線規程1310-1 "+RULE_SUP[st.rsup]+"・"+o.rule.text:(hv?"":"手入力"),e:ref?fmt(ref.e,hv?1:2):"",pct:ref?fmt(ref.pct,2):"",
     inst:hv?"":condLabel(type,o,r&&r.a),
     amp:r&&r.a&&!r.a.none?r.a.A:"",
     isc:hv&&o.isc>0?fmt(o.isc,1):"",ts:hv&&o.isc>0?o.ts:"",scKA:r&&r.sc?fmt(r.sc.kA,1):"",
@@ -609,12 +668,13 @@ $("btnSave").addEventListener("click",()=>{
   });
   store.set("vd.saved",saved);renderHist();toast("保存しました");
 });
-const COLS=[["date","日時"],["site","現場名"],["circuit","回路名"],["mode","計算方式"],["sys","配電方式"],["volt","電圧"],["load","負荷容量"],["current","電流A"],["L","こう長m"],["cable","ケーブル"],["size","サイズ"],["pf","力率"],["freq","周波数Hz"],["temp","導体温度℃"],["allow","許容%"],["e","電圧降下V"],["pct","降下率%"],["inst","布設条件"],["amp","許容電流A"],["isc","短絡電流kA"],["ts","遮断時間s"],["scKA","短絡耐量kA"],["judge","判定"],["minSize","最小サイズ"]];
+const COLS=[["date","日時"],["site","現場名"],["circuit","回路名"],["mode","計算方式"],["sys","配電方式"],["volt","電圧"],["load","負荷容量"],["current","電流A"],["L","こう長m"],["cable","ケーブル"],["size","サイズ"],["pf","力率"],["freq","周波数Hz"],["temp","導体温度℃"],["allow","許容%"],["std","許容値の根拠"],["e","電圧降下V"],["pct","降下率%"],["inst","布設条件"],["amp","許容電流A"],["isc","短絡電流kA"],["ts","遮断時間s"],["scKA","短絡耐量kA"],["judge","判定"],["minSize","最小サイズ"]];
 function recText(x){
   const lines=[`【${x.site||"現場名なし"}${x.circuit?"／"+x.circuit:""}】${x.date}`,
     `${x.mode}　${x.sys} ${x.volt}　${x.load?x.load+"（"+x.current+"A）":x.current+"A"}　こう長${x.L}m`,
     `${x.cable} ${x.size}${x.pf!==""?"　力率"+x.pf+"・"+x.freq+"Hz・"+x.temp+"℃":""}`,
     x.judge?`電圧降下 ${x.e}V（${x.pct}%）許容${x.allow}%${x.amp!==""&&x.amp!=null?`　許容電流 ${x.amp}A（${x.inst}）`:""}${x.scKA?`　短絡耐量 ${x.scKA}kA（短絡${x.isc}kA・${x.ts}秒）`:""} → ${x.judge}`:`許容${x.allow}%`,
+    ...(x.std&&x.std!=="手入力"?[`許容値の根拠：${x.std}`]:[]),
     `条件を満たす最小サイズ：${x.minSize}`];
   return lines.join("\n");
 }
