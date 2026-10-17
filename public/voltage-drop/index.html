@@ -42,7 +42,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 
 /* Result bar */
 .result{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin-inline:-16px;padding:10px 16px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
-.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.modes{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px}
 .modes button{min-height:44px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;font:700 14px var(--f-body)}
 .modes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .res-main{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--panel);border:2px solid var(--line)}
@@ -79,7 +79,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 details{background:var(--panel);border:1px solid var(--line);border-radius:10px}
-summary{cursor:pointer;padding:12px;font-weight:700;min-height:44px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary{cursor:pointer;align-items:center;padding:12px;font-weight:700;min-height:44px;list-style:none;display:flex;justify-content:space-between;gap:8px}
 summary::-webkit-details-marker{display:none}
 summary::after{content:"＋";color:var(--muted)}
 details[open] summary::after{content:"－"}
@@ -93,6 +93,7 @@ th,td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line)}
 th:first-child,td:first-child{text-align:left}
 th{font-size:12px;color:var(--muted);font-weight:700}
 tr.sel td{background:var(--chip)}
+#sizeTable tbody tr{cursor:pointer}
 td.ok{color:var(--ok);font-weight:700} td.ng{color:var(--ng);font-weight:700}
 .tablewrap{overflow-x:auto}
 
@@ -124,8 +125,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 <div class="wrap">
   <section class="result" aria-live="polite">
     <div class="modes" role="group" aria-label="計算モード">
-      <button id="m-simple" data-mode="simple">低圧 簡易</button>
-      <button id="m-formal" data-mode="formal">低圧 正式</button>
+      <button id="m-lv" data-mode="lv">低圧</button>
       <button id="m-hv" data-mode="hv">高圧 6.6kV</button>
     </div>
     <div id="resMain" class="res-main idle">
@@ -141,19 +141,9 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 
   <div id="exampleNote" class="note" hidden>例の値が入っています。数字を打ち替えるとすぐ計算し直します。</div>
 
-  <!-- Low voltage system -->
   <div class="group" id="g-sys">
     <div class="label">配電方式</div>
     <div class="chips" id="sysChips"></div>
-  </div>
-
-  <!-- HV load input mode -->
-  <div class="group" id="g-hvload" hidden>
-    <div class="label">負荷の入れ方</div>
-    <div class="seg" role="group">
-      <button id="hv-kva" data-hvin="kva">容量 kVA</button>
-      <button id="hv-amp" data-hvin="amp">電流 A</button>
-    </div>
   </div>
 
   <div class="row2">
@@ -173,85 +163,89 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <div class="chips" id="typeChips"></div>
   </div>
 
-  <div class="group" id="g-inst">
-    <div class="label" id="instLabel">布設条件</div>
-    <div class="chips" id="instChips"></div>
-    <div class="label">周囲温度</div>
-    <div class="chips" id="ambChips"></div>
-  </div>
-
-  <div class="group">
-    <div class="label">サイズ（選ばなくても最小サイズは出ます）</div>
-    <div class="chips scroll" id="sizeChips"></div>
-  </div>
-
-  <div class="group" id="g-pf">
-    <div class="label">力率 cosθ</div>
-    <div class="chips" id="pfChips"></div>
-  </div>
-
-  <div class="group">
-    <div class="label">許容電圧降下率</div>
-    <div class="seg" role="group" id="amSeg">
-      <button data-am="rule">内線規程で決める</button>
-      <button data-am="manual">数字で選ぶ</button>
-    </div>
-    <div class="group" id="ruleBox">
-      <div class="chips" id="segChips"></div>
-      <div class="chips" id="supChips"></div>
-      <div class="row2">
-        <div class="field">
-          <label class="label" for="inFar">最遠端までのこう長</label>
-          <div class="inbox"><input id="inFar" inputmode="decimal" autocomplete="off" placeholder="上と同じ"><span>m</span></div>
-        </div>
-        <div class="field" id="f-other">
-          <label class="label" for="inOther" id="lblOther">分岐側の降下</label>
-          <div class="inbox"><input id="inOther" inputmode="decimal" autocomplete="off"><span>%</span></div>
-        </div>
-      </div>
-      <div class="note" id="ruleText"></div>
-    </div>
-    <div class="chips" id="allowChips"></div>
-  </div>
-
-  <div class="group" id="g-sc" hidden>
-    <div class="label">短絡電流（受電点。電力会社の提示値）</div>
-    <div class="row2">
-      <div class="field">
-        <div class="inbox"><input id="inSc" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="短絡電流"><span>kA</span></div>
-      </div>
-      <div class="basis" style="align-self:center">わからないときは 12.5kA（高圧受電の遮断器でよく使う定格）で確認</div>
-    </div>
-    <div class="chips" id="scChips"></div>
-    <div class="label">遮断時間（短絡が流れ続ける時間）</div>
-    <div class="chips" id="tsChips"></div>
-  </div>
-
   <div id="hint" class="note" hidden></div>
 
+  <details id="tableBox">
+    <summary>サイズ別の一覧（タップでそのサイズを確認）</summary>
+    <div class="dbody"><div class="tablewrap"><table id="sizeTable"></table></div><div class="basis" id="basis"></div></div>
+  </details>
+
   <details id="advanced">
-    <summary>詳細設定 <span class="res-sub" id="advSum"></span></summary>
+    <summary><span>条件<span class="res-sub">（ふだんはこのままでOK）</span><br><span class="res-sub" id="advSum"></span></span></summary>
     <div class="dbody">
-      <div class="group" id="g-pf2" hidden>
-        <div class="label">力率 cosθ（高圧）</div>
-        <div class="chips" id="pfChips2"></div>
+      <div class="group" id="g-hvload" hidden>
+        <div class="label">負荷の入れ方</div>
+        <div class="seg" role="group">
+          <button id="hv-kva" data-hvin="kva">容量 kVA</button>
+          <button id="hv-amp" data-hvin="amp">電流 A</button>
+        </div>
       </div>
+
+      <div class="group" id="g-sc" hidden>
+        <div class="label">短絡電流（受電点。電力会社の提示値。わからなければ12.5kA）</div>
+        <div class="row2">
+          <div class="field">
+            <div class="inbox"><input id="inSc" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="短絡電流"><span>kA</span></div>
+          </div>
+          <div class="chips" id="scChips"></div>
+        </div>
+        <div class="label">遮断時間</div>
+        <div class="chips" id="tsChips"></div>
+      </div>
+
       <div class="group">
+        <div class="label">許容電圧降下率</div>
+        <div class="seg" role="group" id="amSeg">
+          <button data-am="rule">内線規程で決める</button>
+          <button data-am="manual">数字で選ぶ</button>
+        </div>
+        <div class="group" id="ruleBox">
+          <div class="chips" id="segChips"></div>
+          <div class="chips" id="supChips"></div>
+          <div class="row2">
+            <div class="field">
+              <label class="label" for="inFar">最遠端までのこう長</label>
+              <div class="inbox"><input id="inFar" inputmode="decimal" autocomplete="off" placeholder="上と同じ"><span>m</span></div>
+            </div>
+            <div class="field" id="f-other">
+              <label class="label" for="inOther" id="lblOther">分岐側の降下</label>
+              <div class="inbox"><input id="inOther" inputmode="decimal" autocomplete="off"><span>%</span></div>
+            </div>
+          </div>
+          <div class="basis" id="ruleText"></div>
+        </div>
+        <div class="chips" id="allowChips"></div>
+      </div>
+
+      <div class="group" id="g-inst">
+        <div class="label" id="instLabel">布設条件</div>
+        <div class="chips" id="instChips"></div>
+        <div class="label">周囲温度</div>
+        <div class="chips" id="ambChips"></div>
+      </div>
+
+      <div class="group">
+        <div class="label">力率 cosθ</div>
+        <div class="chips" id="pfChips"></div>
+      </div>
+
+      <div class="group" id="g-formula">
+        <div class="label">計算式</div>
+        <div class="chips" id="formulaChips"></div>
+      </div>
+
+      <div class="group" id="g-freq">
         <div class="label">周波数</div>
         <div class="chips" id="freqChips"></div>
       </div>
-      <div class="group">
+      <div class="group" id="g-temp">
         <div class="label">導体温度（抵抗の補正）</div>
         <div class="chips" id="tempChips"></div>
       </div>
-      <div class="basis">簡易式はこの設定を使いません。抵抗とリアクタンスはメーカー表の値（90℃、VVFは60℃の交流抵抗）で、導体温度を変えると抵抗だけ補正します。出典は下の「計算の根拠と出典」にあります。</div>
+      <div class="basis">抵抗とリアクタンスはメーカー表の値（90℃、VVFは60℃の交流抵抗）です。出典は下の「計算の根拠と出典」にあります。</div>
     </div>
   </details>
 
-  <details id="tableBox">
-    <summary>サイズ別の降下率</summary>
-    <div class="dbody"><div class="tablewrap"><table id="sizeTable"></table></div><div class="basis" id="basis"></div></div>
-  </details>
 
   <details id="srcBox">
     <summary>計算の根拠と出典</summary>
@@ -298,7 +292,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
   </section>
 
-  <p class="foot">試作版 v0.5。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
+  <p class="foot">試作版 v0.6。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -442,7 +436,7 @@ function scFor(sz,o){
 
 <script>
 const $=id=>document.getElementById(id);
-const DEF={mode:"simple",sys:"3p3w200",I:"50",L:"80",type:"CV",size:"22",inst:"air",wires:"3",amb:"base",pf:0.9,allow:2,freq:60,temp:"auto",
+const DEF={mode:"formal",lvf:"formal",sys:"3p3w200",I:"50",L:"80",type:"CV",size:"",inst:"air",wires:"3",amb:"base",pf:0.9,allow:2,freq:60,temp:"auto",
   am:"rule",rseg:"main",rsup:"lv",far:"",other:"2",hvIn:"kva",hvLoad:"500",hvL:"1200",hvSize:"",hvAllow:2,hvPf:0.9,hvIsc:"12.5",hvTs:0.2,site:"",circuit:""};
 let st={...DEF}, saved=[], firstRun=true;
 const store={
@@ -481,10 +475,11 @@ function curSizeName(){return isHV()?st.hvSize:st.size}
 
 function renderControls(){
   const hv=isHV();
-  ["simple","formal","hv"].forEach(m=>$("m-"+m).setAttribute("aria-pressed",String(st.mode===m)));
-  $("g-sys").hidden=hv; $("g-type").hidden=hv; $("g-hvload").hidden=!hv;
-  $("g-pf").hidden=st.mode!=="formal"; $("g-pf2").hidden=!hv;
-  $("advanced").hidden=st.mode==="simple";
+  $("m-lv").setAttribute("aria-pressed",String(!hv)); $("m-hv").setAttribute("aria-pressed",String(hv));
+  $("g-sys").hidden=hv; $("g-type").hidden=hv; $("g-hvload").hidden=!hv; $("g-formula").hidden=hv;
+  const simple=st.mode==="simple";
+  $("pfChips").parentElement.hidden=simple; $("g-freq").hidden=simple; $("g-temp").hidden=simple;
+  chipRow($("formulaChips"),[{value:"formal",html:"正式<small>R・X・力率</small>"},{value:"simple",html:"簡易<small>内線規程の簡易式</small>"}],st.mode,v=>set({mode:v,lvf:v}));
   chipRow($("sysChips"),Object.entries(SYSTEMS).map(([k,s])=>({value:k,html:s.label+"<small>"+s.v+"</small>"})),st.sys,v=>set({sys:v}));
   chipRow($("typeChips"),[{value:"CV",html:"CV<small>多心</small>"},{value:"CVT",label:"CVT"},{value:"VVF",label:"VVF"}],st.type,v=>set({type:v,size:""}));
   $("g-inst").hidden=hv; $("g-sc").hidden=!hv;
@@ -496,13 +491,8 @@ function renderControls(){
   if(vvf)chipRow($("instChips"),Object.entries(WIRES).map(([k,w])=>({value:k,label:w.label})),st.wires,v=>set({wires:v}));
   else chipRow($("instChips"),Object.entries(INST).map(([k,l])=>({value:k,label:l})),st.inst,v=>set({inst:v}));
   chipRow($("ambChips"),[{value:"base",html:"基準<small>"+(vvf?30:40)+"℃</small>"},...["30","35","40","45","50"].filter(v=>!(vvf?v==="30":v==="40")).map(v=>({value:v,label:v+"℃"}))],st.amb,v=>set({amb:v}));
-  const sizes=listOf(cableType());
-  chipRow($("sizeChips"),[{value:"",label:"未選択"},...sizes.map(s=>({value:s.name,label:s.name+(s.name.endsWith("mm")?"":"<small>sq</small>")}))],curSizeName(),v=>set(hv?{hvSize:v}:{size:v}));
   const pfs=[1.0,0.9,0.85,0.8].map(v=>({value:v,label:v.toFixed(v===0.85?2:1)}));
-  const selChip=$("sizeChips").querySelector('[aria-pressed="true"]');
-  if(selChip)$("sizeChips").scrollLeft=Math.max(0,selChip.offsetLeft-$("sizeChips").offsetLeft-40);
-  chipRow($("pfChips"),pfs,st.pf,v=>set({pf:v}));
-  chipRow($("pfChips2"),pfs,st.hvPf,v=>set({hvPf:v}));
+  chipRow($("pfChips"),pfs,hv?st.hvPf:st.pf,v=>set(hv?{hvPf:v}:{pf:v}));
   chipRow($("allowChips"),[2,3,4,5,6,7].map(v=>({value:v,label:v+"%"})),hv?st.hvAllow:st.allow,v=>set(hv?{hvAllow:v}:{allow:v}));
   const rule=!hv&&st.am==="rule";
   $("amSeg").hidden=hv; $("ruleBox").hidden=!rule; $("allowChips").hidden=rule;
@@ -525,7 +515,11 @@ function renderControls(){
   if(document.activeElement!==inL)inL.value=wantL;
   $("inSite").value=st.site; $("inCircuit").value=st.circuit;
   const t=st.temp==="auto"?tmax:st.temp;
-  $("advSum").textContent=(hv?"力率"+st.hvPf+"・":"")+st.freq+"Hz・"+t+"℃";
+  const vv=st.type==="VVF";
+  $("advSum").textContent=hv?["短絡"+st.hvIsc+"kA・"+st.hvTs+"秒","許容"+st.hvAllow+"%","力率"+st.hvPf,st.freq+"Hz"].join("・"):
+    [st.am==="rule"?"内線規程（"+RULE_SEG[st.rseg]+"・"+RULE_SUP[st.rsup]+"）":"許容"+st.allow+"%",
+     vv?"同一管内"+WIRES[st.wires].label:INST[st.inst],"周囲"+(st.amb==="base"?(vv?30:40):st.amb)+"℃",
+     ...(simple?["簡易式"]:["力率"+st.pf,st.freq+"Hz"])].join("・");
   $("exampleNote").hidden=!firstRun;
 }
 
@@ -574,11 +568,22 @@ function compute(){
       ra.innerHTML=a.none?"許容電流：このサイズの電線管布設のデータがありません":
         "許容電流 <b class=\""+(r.aOk?"ok":"ng")+"\">"+a.A+"A</b>（"+condLabel(type,o,a)+"）"+(r.aOk?" ≧ ":" ＜ ")+"負荷"+fmt(o.I,1)+"A"+(r.aOk?"":"　電流不足");
     }
+  }else if(ms.none){
+    box.className="res-main ng";
+    $("rPct").textContent=type==="VVF"?"CVでも不足":"325sqでも不足";
+    $("rSub").textContent="許容"+o.allow+"%に収まるサイズがありません（並列などを検討）";
+    $("rBadge").textContent="NG";
   }else{
-    $("rPct").textContent=ms.none?"--":fmt(ms.r.pct,2)+"%";
-    $("rSub").textContent="サイズ未選択のため、最小サイズでの値です";
-    $("rBadge").textContent="—";
+    box.className="res-main ok";
+    const dv=ms.r.base>1000?1:2;
+    $("rPct").textContent=DATA[ms.type].label+" "+ms.sz.name+(ms.sz.name.endsWith("mm")?"":"sq");
+    $("rSub").textContent="使えるいちばん細いサイズ"+(ms.by==="amp"?"（許容電流で決定）":ms.by==="sc"?"（短絡強度で決定）":"")+(ms.fallback?"・VVFでは不可":"")+"　降下 "+fmt(ms.r.pct,2)+"%（"+fmt(ms.r.e,dv)+"V）　許容"+o.allow+"%";
+    $("rBadge").textContent="OK";
+    const ra=$("rAmp");
+    if(isHV()&&ms.sc){ra.hidden=false;ra.textContent="短絡 "+fmt(ms.sc.kA,1)+"kAまで耐える ≧ "+fmt(o.isc,1)+"kA（"+o.ts+"秒）";}
+    else if(ms.a&&!ms.a.none){ra.hidden=false;ra.textContent="許容電流 "+ms.a.A+"A ≧ 負荷"+fmt(o.I,1)+"A（"+condLabel(ms.type,o,ms.a)+"）";}
   }
+  $("resMain").querySelector(".res-min").hidden=!sz;
   // hint
   const hint=$("hint");hint.hidden=true;
   if(mode==="simple"){
@@ -587,16 +592,13 @@ function compute(){
     let msg="必要断面積 "+fmt(am,2)+" mm² 以上（簡易式）。";
     if(ref&&ref.pct>o.allow*0.75&&ref.pct<=o.allow)msg+="許容値ぎりぎりです。正式式でも確認してください（正式式は導体温度を考慮するので大きめに出ます）。";
     hint.textContent=msg;hint.hidden=false;
-  }else if(mode==="hv"){
-    hint.textContent=o.isc>0?"短絡に耐える必要断面積 "+fmt(o.isc*1000*Math.sqrt(o.ts)/SC_K,1)+" mm² 以上（"+fmt(o.isc,1)+"kA・"+o.ts+"秒）。短絡電流は電力会社に確認した値に打ち替えてください。":"短絡電流を入れると、短絡時の熱的強度も確認します。";
-    hint.hidden=false;
   }
   // table
   const hvT=isHV();
   const rows=listOf(type).map(s=>{const x=dropFor(mode,type,s,o);const a=ampFor(type,s.name,o);const aOk=a===null?true:ampOk(a,o.I);const sc=hvT?scFor(s,o):null;return {s,x,a,sc,ok:x.pct<=o.allow+1e-9&&aOk&&(!sc||sc.ok)}});
   const dv=hvT?1:2;
   $("sizeTable").innerHTML="<thead><tr><th>サイズ</th><th>降下 V</th><th>降下率</th>"+(hvT?"<th>短絡耐量</th>":"<th>許容電流</th>")+"<th>判定</th></tr></thead><tbody>"+
-    rows.map(({s,x,a,sc,ok})=>`<tr class="${s.name===szName?"sel":""}"><td>${s.name}${s.name.endsWith("mm")?"":"sq"}</td><td class="num">${fmt(x.e,dv)}</td><td class="num">${fmt(x.pct,2)}%</td>${hvT?`<td class="num${sc?(sc.ok?"":" ng"):""}">${sc?fmt(sc.kA,1)+"kA":"—"}</td>`:`<td class="num">${a.none?"—":a.A+"A"}</td>`}<td class="${ok?"ok":"ng"}">${ok?"OK":"NG"}</td></tr>`).join("")+"</tbody>";
+    rows.map(({s,x,a,sc,ok})=>`<tr data-size="${s.name}" class="${s.name===szName?"sel":""}"><td>${s.name}${s.name.endsWith("mm")?"":"sq"}</td><td class="num">${fmt(x.e,dv)}</td><td class="num">${fmt(x.pct,2)}%</td>${hvT?`<td class="num${sc?(sc.ok?"":" ng"):""}">${sc?fmt(sc.kA,1)+"kA":"—"}</td>`:`<td class="num">${a.none?"—":a.A+"A"}</td>`}<td class="${ok?"ok":"ng"}">${ok?"OK":"NG"}</td></tr>`).join("")+"</tbody>";
   let basis;
   if(mode==="simple")basis="簡易式 e = "+SYSTEMS[o.sys].kS+" × L × I ÷ (1000 × A)。基準電圧 "+SYSTEMS[o.sys].base+"V";
   else{
@@ -617,7 +619,11 @@ function condLabel(type,o,a){
 function set(p){Object.assign(st,p);firstRun=false;store.set("vd.state",st);renderControls();compute();}
 
 // inputs
-document.querySelectorAll(".modes button").forEach(b=>b.addEventListener("click",()=>set({mode:b.dataset.mode})));
+document.querySelectorAll(".modes button").forEach(b=>b.addEventListener("click",()=>set({mode:b.dataset.mode==="hv"?"hv":(st.lvf||"formal")})));
+// サイズ別の一覧: 行をタップするとそのサイズで判定。もう一度タップで解除（最小サイズの表示に戻る）
+$("sizeTable").addEventListener("click",e=>{const tr=e.target.closest("tr[data-size]");if(!tr)return;
+  const v=tr.dataset.size===curSizeName()?"":tr.dataset.size;set(isHV()?{hvSize:v}:{size:v});
+  if(v)window.scrollTo({top:0,behavior:"smooth"});});
 document.querySelectorAll("[data-hvin]").forEach(b=>b.addEventListener("click",()=>{
   const v=b.dataset.hvin; if(v===st.hvIn)return;
   const cur=numIn(st.hvLoad); let nv=st.hvLoad;
