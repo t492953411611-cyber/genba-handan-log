@@ -117,6 +117,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 .copybox{width:100%;min-height:120px;font:12px var(--f-num);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
 .empty{color:var(--muted);font-size:14px}
 .foot{font-size:12px;color:var(--muted)}
+.src{font-size:13px}.src p,.src ul{margin:0}.src ul{padding-left:18px}.src a{color:var(--accent)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
@@ -224,13 +225,36 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
         <div class="label">導体温度（抵抗の補正）</div>
         <div class="chips" id="tempChips"></div>
       </div>
-      <div class="basis">簡易式はこの設定を使いません。抵抗は20℃値を温度で補正、リアクタンスは50Hz値×1.2で60Hzに換算しています。</div>
+      <div class="basis">簡易式はこの設定を使いません。抵抗とリアクタンスはメーカー表の値（90℃、VVFは60℃の交流抵抗）で、導体温度を変えると抵抗だけ補正します。出典は下の「計算の根拠と出典」にあります。</div>
     </div>
   </details>
 
   <details id="tableBox">
     <summary>サイズ別の降下率</summary>
     <div class="dbody"><div class="tablewrap"><table id="sizeTable"></table></div><div class="basis" id="basis"></div></div>
+  </details>
+
+  <details id="srcBox">
+    <summary>計算の根拠と出典</summary>
+    <div class="dbody src">
+      <p><b>電圧降下の式</b><br>正式式・高圧：e = K × I × L × (R cosθ + X sinθ)。K は単相2線 2、単相3線 1、三相3線 √3。フジクラ・ダイヤケーブル技術資料「電圧降下」と同じ式です。<br>簡易式：内線規程の e = 35.6 / 17.8 / 30.8 × L × I ÷ (1000 × A)。</p>
+      <p><b>導体抵抗（20℃）</b><br>JIS C 3605（600V CV）・JIS C 3606（6600V CV）の最大導体抵抗。フジクラ・ダイヤケーブルのカタログ・仕様書（600V CV、6600V CVT SES-00101）の値と一致します。</p>
+      <p><b>交流抵抗とリアクタンス（低圧 CV・CVT・VVF）</b><br>導体温度90℃（VVFは60℃）の表の値をそのまま使っています（リアクタンスは50Hz・60Hzそれぞれの値、交流抵抗は60Hzの値）。日本電線工業会 技資第103号B「低圧電線・ケーブルのインピーダンス」（2024年6月）、古河電工「電設資材ガイド」、矢崎 電線要覧「常数篇」の3資料で一致。フジクラ・ダイヤケーブルの計算例（600V CVT 38sq、50Hz：R 0.626、X 0.0955 Ω/km）とも一致します。CVは2心・3心の値、VVFは単相2線で2心、それ以外で3心の値です。</p>
+      <p><b>交流抵抗とリアクタンス（6.6kV CVT）</b><br>古河電工「電設資材ガイド2019-2020」の6600V CVT（90℃）と、6600V CV・CVT インピーダンス表のトリプレックス形（90℃）の2つを比べ、差は1%以内でした。大きい方の値を使っています。矢崎「常数篇」の単心3条俵積みの値ともほぼ一致します。</p>
+      <p><b>導体温度による補正</b><br>R(t) = R(90℃) × {1 + 0.00393 × (t − 20)} ÷ {1 + 0.00393 × 70}（VVFは60℃の値から同じ式で補正）。0.00393 は銅の抵抗温度係数（フジクラ・ダイヤケーブル技術資料と同じ値）。</p>
+      <p><b>短絡時の熱的強度（高圧）</b><br>A ≧ Is × √t ÷ 134。架橋ポリエチレン（CV・CVT）、銅導体、短絡前90℃ → 短絡時230℃の略算式で、フジクラ・ダイヤケーブル技術資料「短絡容量」と矢崎「常数篇」に同じ式があります。線心数・定格電圧には関係しません。</p>
+      <p><b>許容電流（低圧）</b><br>CV・CVTはJCS 0168-2（周囲40℃、1条布設）、VVFはIV電線の許容電流×電流減少係数（内線規程・電技解釈146条の考え方）。</p>
+      <ul>
+        <li><a href="https://www.fujikura-dia.co.jp/tech/documents/short-circuit-capacity.php" target="_blank" rel="noopener">フジクラ・ダイヤケーブル「短絡容量」</a></li>
+        <li><a href="https://www.fujikura-dia.co.jp/tech/documents/voltage-drop.php" target="_blank" rel="noopener">フジクラ・ダイヤケーブル「電圧降下」</a></li>
+        <li><a href="https://www.fujikura-dia.co.jp/pdf/specification/SES-00101.pdf" target="_blank" rel="noopener">フジクラ・ダイヤケーブル 6600V CVT 仕様書</a></li>
+        <li><a href="https://www.jcma2.jp/files/gijutsu/Shiryo/103B.pdf" target="_blank" rel="noopener">日本電線工業会 技資第103号B</a></li>
+        <li><a href="https://www.iwasaki.co.jp/lighting/support/tech-data/document/wiring/09.html" target="_blank" rel="noopener">ケーブルのインピーダンス（古河電工 電設資材ガイドの表を掲載、岩崎電気）</a></li>
+        <li><a href="https://densen.yazaki-group.com/app/files/2023/01/directory_03-2.pdf" target="_blank" rel="noopener">矢崎 電線要覧「常数篇」</a></li>
+        <li><a href="https://www.sds-kaeruya.com/shop/pages/6600V-CV-inpedance.aspx" target="_blank" rel="noopener">6600V CV・CVT インピーダンス表（蛙屋）</a></li>
+      </ul>
+      <p>実際に使うケーブルのメーカー資料と値が違う場合は、メーカーの値を優先してください。</p>
+    </div>
   </details>
 
   <section class="save">
@@ -254,24 +278,32 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
   </section>
 
-  <p class="foot">試作版 v0.3。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗はJIS規格の記憶値、リアクタンスは推定値です（メーカー表と照合予定）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
+  <p class="foot">試作版 v0.4。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 
 <script id="calc">
+// ケーブル定数。R20 = 20℃最大導体抵抗（JIS、フジクラ・ダイヤケーブル カタログで確認）
+// Rref = 交流導体抵抗（tref℃・60Hz）、X50 / X60 = リアクタンス。いずれも Ω/km
+// 低圧CV・CVT・VVF: 日本電線工業会 技資第103号B・古河電工 電設資材ガイド・矢崎 常数篇（3資料で一致）
+// 6.6kV CVT: 古河電工 電設資材ガイド と トリプレックス形インピーダンス表（蛙屋掲載）の大きい方
+// VVF の X は [2心, 3心]。単相2線は2心、それ以外は3心の値を使う
 const DATA={
-  alpha:0.00393, f60:1.2,
-  CV:{label:"CV",tmax:90,sizes:[
-    ["2",2,9.42,0.110],["3.5",3.5,5.30,0.105],["5.5",5.5,3.40,0.100],["8",8,2.36,0.099],["14",14,1.34,0.094],
-    ["22",22,0.849,0.090],["38",38,0.491,0.086],["60",60,0.311,0.084],["100",100,0.187,0.081],["150",150,0.124,0.080],
-    ["200",200,0.0933,0.079],["250",250,0.0754,0.079],["325",325,0.0579,0.078]]},
-  CVT:{label:"CVT",tmax:90,sizes:[
-    ["8",8,2.36,0.099],["14",14,1.34,0.094],["22",22,0.849,0.090],["38",38,0.491,0.086],["60",60,0.311,0.084],
-    ["100",100,0.187,0.081],["150",150,0.124,0.080],["200",200,0.0933,0.079],["250",250,0.0754,0.079],["325",325,0.0579,0.078]]},
-  VVF:{label:"VVF",tmax:60,sizes:[["1.6mm",2.01,8.92,0.110],["2.0mm",3.14,5.65,0.105],["2.6mm",5.31,3.35,0.100]]},
-  CVT6600:{label:"6.6kV CVT",tmax:90,sizes:[
-    ["22",22,0.849,0.130],["38",38,0.491,0.120],["60",60,0.311,0.112],["100",100,0.187,0.104],
-    ["150",150,0.124,0.098],["200",200,0.0933,0.094],["250",250,0.0754,0.092],["325",325,0.0579,0.089]]}
+  alpha:0.00393,
+  CV:{label:"CV",tmax:90,tref:90,sizes:[
+    ["2",2,9.42,12.0,0.0992,0.119],["3.5",3.5,5.30,6.76,0.0914,0.110],["5.5",5.5,3.40,4.34,0.0914,0.110],["8",8,2.36,3.01,0.0870,0.104],
+    ["14",14,1.34,1.71,0.0828,0.0994],["22",22,0.849,1.08,0.0820,0.0984],["38",38,0.491,0.627,0.0771,0.0925],["60",60,0.311,0.397,0.0768,0.0922],
+    ["100",100,0.187,0.240,0.0773,0.0928],["150",150,0.124,0.160,0.0744,0.0893],["200",200,0.0933,0.122,0.0755,0.0906],
+    ["250",250,0.0754,0.0995,0.0739,0.0888],["325",325,0.0579,0.0783,0.0723,0.0867]]},
+  CVT:{label:"CVT",tmax:90,tref:90,sizes:[
+    ["8",8,2.36,2.98,0.116,0.139],["14",14,1.34,1.71,0.107,0.128],["22",22,0.849,1.08,0.103,0.123],["38",38,0.491,0.626,0.0955,0.115],
+    ["60",60,0.311,0.397,0.0913,0.110],["100",100,0.187,0.240,0.0881,0.106],["150",150,0.124,0.160,0.0846,0.102],
+    ["200",200,0.0933,0.121,0.0859,0.103],["250",250,0.0754,0.0989,0.0836,0.100],["325",325,0.0579,0.0775,0.0816,0.0980]]},
+  VVF:{label:"VVF",tmax:60,tref:60,sizes:[
+    ["1.6mm",2.01,8.92,10.3,[0.103,0.117],[0.123,0.141]],["2.0mm",3.14,5.65,6.54,[0.096,0.111],[0.115,0.133]],["2.6mm",5.31,3.35,3.88,[0.0951,0.110],[0.114,0.132]]]},
+  CVT6600:{label:"6.6kV CVT",tmax:90,tref:90,sizes:[
+    ["22",22,0.849,1.08,0.136,0.163],["38",38,0.491,0.626,0.125,0.150],["60",60,0.311,0.397,0.116,0.139],["100",100,0.187,0.239,0.108,0.129],
+    ["150",150,0.124,0.159,0.102,0.123],["200",200,0.0933,0.121,0.101,0.121],["250",250,0.0754,0.0984,0.0980,0.118],["325",325,0.0579,0.0768,0.0946,0.114]]}
 };
 // 許容電流 [A]（1条布設）
 // CV・CVT: JCS 0168-2、周囲温度40℃・導体90℃。air=気中・暗きょ（ケーブルラック・ころがし含む）、conduit=電線管に1条
@@ -312,12 +344,14 @@ const SYSTEMS={
   "1p3w":   {label:"単相3線",v:"100/200V",kS:17.8,kF:1,base:100,vs:100},
   "3p3w200":{label:"三相3線",v:"200V",kS:30.8,kF:Math.sqrt(3),base:200,vs:200}
 };
-const sizeOf=(type,name)=>{const s=DATA[type].sizes.find(x=>x[0]===name);return s&&{name:s[0],area:s[1],R20:s[2],X50:s[3]}};
-const listOf=type=>DATA[type].sizes.map(s=>({name:s[0],area:s[1],R20:s[2],X50:s[3]}));
+const toSz=s=>({name:s[0],area:s[1],R20:s[2],Rref:s[3],X50:s[4],X60:s[5]});
+const sizeOf=(type,name)=>{const s=DATA[type].sizes.find(x=>x[0]===name);return s&&toSz(s)};
+const listOf=type=>DATA[type].sizes.map(toSz);
 function rx(type,sz,o){
   const t=o.temp==="auto"?DATA[type].tmax:Number(o.temp);
-  const R=sz.R20*(1+DATA.alpha*(t-20));
-  const X=sz.X50*(o.freq===60?DATA.f60:1);
+  const a=DATA.alpha, R=sz.Rref*(1+a*(t-20))/(1+a*(DATA[type].tref-20));
+  let X=o.freq===60?sz.X60:sz.X50;
+  if(Array.isArray(X))X=X[o.sys==="1p2w100"||o.sys==="1p2w200"?0:1];
   return {R,X,t};
 }
 // 1サイズの電圧降下。戻り値 {e,pct,...}
