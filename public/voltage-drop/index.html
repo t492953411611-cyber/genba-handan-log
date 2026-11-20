@@ -271,6 +271,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
       <p><b>短絡時の熱的強度（高圧）</b><br>A ≧ Is × √t ÷ 134。架橋ポリエチレン（CV・CVT）、銅導体、短絡前90℃ → 短絡時230℃の略算式で、フジクラ・ダイヤケーブル技術資料「短絡容量」と矢崎「常数篇」に同じ式があります。線心数・定格電圧には関係しません。</p>
       <p><b>動力と電灯で変わる、必要な許容電流</b><br>電灯・電熱は負荷電流そのもの。動力（電動機など起動電流の大きい機器）の合計 IM が電灯・電熱の合計 IH より大きいときは、IM が50A以下なら1.25倍、50A超なら1.1倍して IH に足した値以上の許容電流が必要です（電気設備技術基準の解釈 第148条、内線規程の幹線の規定）。電動機だけの分岐回路も同じ考え方で判定しています。電圧降下は割り増ししない実際の電流で計算します。</p>
       <p><b>許容電流（低圧）</b><br>CV・CVTはJCS 0168-2（周囲40℃、1条布設）。内線規程 資料1-3-3の備考1により中性線は心数に数えないので、単相2線・単相3線はCV 2心／CVT 単心2個より、三相はCV 3心／CVT 単心3個よりの値を使います（CVT 単心2個より：14sq 91A、22sq 120A、38sq 165A、60sq 225A、100sq 310A、150sq 400A、200sq 490A、250sq 565A、325sq 670A。電線管と8sqは単心3個よりの値で安全側）。VVFはIV電線の許容電流×電流減少係数（内線規程・電技解釈146条の考え方）。</p>
+      <p><b>許容電流（高圧）</b><br>6.6kV CVT（トリプレックス）、気中・暗きょ、周囲40℃・導体90℃の値（内線規程 資料1-3-3、JCS 0168-2）：22sq 120A、38sq 170A、60sq 225A、100sq 310A、150sq 405A、200sq 485A、250sq 560A、325sq 660A。</p>
       <ul>
         <li><a href="https://www.fujikura-dia.co.jp/tech/documents/short-circuit-capacity.php" target="_blank" rel="noopener">フジクラ・ダイヤケーブル「短絡容量」</a></li>
         <li><a href="https://www.fujikura-dia.co.jp/tech/documents/voltage-drop.php" target="_blank" rel="noopener">フジクラ・ダイヤケーブル「電圧降下」</a></li>
@@ -305,7 +306,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
     <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
   </section>
 
-  <p class="foot">試作版 v0.8。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下と短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の両方がOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の許容電流（常時）はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
+  <p class="foot">試作版 v0.9。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下・許容電流（6.6kV CVT 気中・暗きょ40℃）・短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の3つがOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の地中管路・直埋の許容電流はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -345,6 +346,8 @@ const AMP={
     CV2:{"2":23,"3.5":31,"5.5":41,"8":51,"14":70,"22":93,"38":135,"60":175,"100":245,"150":320,"200":390,"250":455,"325":540},
     CV3:{"2":19,"3.5":26,"5.5":35,"8":43,"14":59,"22":77,"38":110,"60":150,"100":210,"150":265,"200":335,"250":380,"325":450},
     CVT:{"22":82,"38":110,"60":150,"100":215,"150":275,"200":340,"250":395,"325":475}},
+  // 6.6kV CVT（トリプレックス）: 内線規程 資料1-3-3 p.789、気中・暗きょ 周囲40℃・導体90℃
+  HV:{"22":120,"38":170,"60":225,"100":310,"150":405,"200":485,"250":560,"325":660},
   IV:{"1.6mm":27,"2.0mm":35,"2.6mm":48}
 };
 const WIRES={"3":{label:"3本以下",f:0.70},"4":{label:"4本",f:0.63},"6":{label:"5〜6本",f:0.56},"15":{label:"7〜15本",f:0.49}};
@@ -352,11 +355,15 @@ const WIRES={"3":{label:"3本以下",f:0.70},"4":{label:"4本",f:0.63},"6":{labe
 const TEMP_F={x90:{20:1.18,25:1.14,30:1.10,35:1.05,40:1,45:0.95,50:0.89},v60:{30:1,35:0.91,40:0.82,45:0.71,50:0.58}};
 const round78=v=>{const n=Math.floor(v);return v-n>=0.8-1e-9?n+1:n};
 const INST={air:"気中・ラック・暗きょ",conduit:"電線管"};
-const AMP_COL={CV:"CV",CV2:"CV 2心",CV3:"CV 3心",CVT:"CVT（単心3個より）",CVD:"CVT（単心2個より）",VVF:"VVF"};
+const AMP_COL={CV:"CV",CV2:"CV 2心",CV3:"CV 3心",CVT:"CVT（単心3個より）",CVD:"CVT（単心2個より）",HV:"6.6kV CVT",VVF:"VVF"};
 // 許容電流（周囲温度補正込み）。データが無いサイズは null
 function ampFor(type,sizeName,o){
-  if(type==="CVT6600")return null;
   let base,col,t0,tmax;
+  if(type==="CVT6600"){col="HV";base=AMP.HV[sizeName];t0=40;tmax=90;
+    if(!base)return {none:true,col};
+    const th=o.amb==="base"||o.amb==null?40:Number(o.amb);
+    const f=TEMP_F.x90[th]??(th>=tmax?0:Math.sqrt((tmax-th)/(tmax-t0)));
+    return {A:Math.floor(base*f),base,f,th,col};}
   if(type==="VVF"){col="VVF";const iv=AMP.IV[sizeName];base=iv&&round78(iv*WIRES[o.wires].f);t0=30;tmax=60;}
   else{
     // 内線規程 資料1-3-3 備考1: 中性線は心数に数えない → 単相（2線・3線）は2心／単心2個よりの値、三相は3心／単心3個より
@@ -424,7 +431,7 @@ function minSize(mode,type,o){
       const r=dropFor(mode,tp,sz,o), dOk=r.pct<=o.allow+1e-9;
       if(dOk&&!dropOnly)dropOnly=sz.name;
       const a=ampFor(tp,sz.name,o), sc=mode==="hv"?scFor(sz,o):null;
-      if(dOk&&(a===null||ampOk(a,o.need))&&(!sc||sc.ok))return {type:tp,sz,r,a,sc,by:dropOnly===sz.name?"drop":(mode==="hv"?"sc":"amp")};
+      if(dOk&&(a===null||ampOk(a,o.need))&&(!sc||sc.ok))return {type:tp,sz,r,a,sc,by:dropOnly===sz.name?"drop":(mode==="hv"?minBy(tp,o):"amp")};
     }
     return null;
   };
@@ -432,6 +439,13 @@ function minSize(mode,type,o){
   if(hit)return hit;
   if(type==="VVF"){const cv=tryType("CV");if(cv)return {...cv,fallback:true};}
   return {none:true};
+}
+// 高圧で電圧降下以外の決め手（許容電流と短絡のうち、より太いサイズを要求した方）
+function minBy(tp,o){
+  const first=f=>{const i=listOf(tp).findIndex(f);return i<0?99:i;};
+  const ia=first(sz=>{const a=ampFor(tp,sz.name,o);return a&&!a.none&&ampOk(a,o.need);});
+  const is=first(sz=>{const c=scFor(sz,o);return !c||c.ok;});
+  return ia>=is?"amp":"sc";
 }
 // 簡易式の必要断面積
 function areaMin(o){const s=SYSTEMS[o.sys];const eA=s.base*o.allow/100;return s.kS*o.L*o.I/(1000*eA);}
@@ -593,10 +607,10 @@ function compute(){
     if(isHV()){
       const ra=$("rAmp");ra.hidden=false;
       const j=(f,t)=>"<b class=\""+(f?"ok":"ng")+"\">"+t+(f?" OK":" NG")+"</b>";
-      ra.innerHTML=j(dOk,"電圧降下")+"　"+(r.sc?j(r.sc.ok,"短絡")+"（"+sz.name+"sqは"+fmt(r.sc.kA,1)+"kAまで"+(r.sc.ok?" ≧ ":" ＜ ")+fmt(o.isc,1)+"kA・"+o.ts+"秒）":"短絡：短絡電流を入れてください")+
+      ra.innerHTML=j(dOk,"電圧降下")+"　"+(a&&!a.none?j(r.aOk,"許容電流")+"（"+a.A+"A"+(r.aOk?" ≧ ":" ＜ ")+fmt(o.need,1)+"A）　":"")+(r.sc?j(r.sc.ok,"短絡")+"（"+sz.name+"sqは"+fmt(r.sc.kA,1)+"kAまで"+(r.sc.ok?" ≧ ":" ＜ ")+fmt(o.isc,1)+"kA・"+o.ts+"秒）":"短絡：短絡電流を入れてください")+
         (r.sc?(ok?"<br>→ <b class=\"ok\">このケーブルは使用可</b>":"<br>→ <b class=\"ng\">このケーブルは使用不可</b>"):"");
     }
-    if(a){
+    if(a&&!isHV()){
       const ra=$("rAmp");ra.hidden=false;
       ra.innerHTML=a.none?"許容電流：このサイズの電線管布設のデータがありません":
         "許容電流 <b class=\""+(r.aOk?"ok":"ng")+"\">"+a.A+"A</b>（"+condLabel(type,o,a)+"）"+(r.aOk?" ≧ ":" ＜ ")+needLabel(o)+(r.aOk?"":"　電流不足");
@@ -613,7 +627,7 @@ function compute(){
     $("rSub").textContent="使えるいちばん細いサイズ"+(ms.by==="amp"?"（許容電流で決定）":ms.by==="sc"?"（短絡強度で決定）":"")+(ms.fallback?"・VVFでは不可":"")+"　降下 "+fmt(ms.r.pct,2)+"%（"+fmt(ms.r.e,dv)+"V）　許容"+o.allow+"%";
     $("rBadge").textContent="OK";
     const ra=$("rAmp");
-    if(isHV()&&ms.sc){ra.hidden=false;ra.textContent="短絡 "+fmt(ms.sc.kA,1)+"kAまで耐える ≧ "+fmt(o.isc,1)+"kA（"+o.ts+"秒）";}
+    if(isHV()&&ms.sc){ra.hidden=false;ra.textContent=(ms.a&&!ms.a.none?"許容電流 "+ms.a.A+"A ≧ "+fmt(o.need,1)+"A　":"")+"短絡 "+fmt(ms.sc.kA,1)+"kAまで耐える ≧ "+fmt(o.isc,1)+"kA（"+o.ts+"秒）";}
     else if(ms.a&&!ms.a.none){ra.hidden=false;ra.textContent="許容電流 "+ms.a.A+"A ≧ "+needLabel(o)+"（"+condLabel(ms.type,o,ms.a)+"）";}
   }
   $("resMain").querySelector(".res-min").hidden=!sz;
@@ -630,8 +644,8 @@ function compute(){
   const hvT=isHV();
   const rows=listOf(type).map(s=>{const x=dropFor(mode,type,s,o);const a=ampFor(type,s.name,o);const aOk=a===null?true:ampOk(a,o.need);const sc=hvT?scFor(s,o):null;return {s,x,a,sc,ok:x.pct<=o.allow+1e-9&&aOk&&(!sc||sc.ok)}});
   const dv=hvT?1:2;
-  $("sizeTable").innerHTML="<thead><tr><th>サイズ</th><th>降下 V</th><th>降下率</th>"+(hvT?"<th>短絡耐量</th>":"<th>許容電流</th>")+"<th>判定</th></tr></thead><tbody>"+
-    rows.map(({s,x,a,sc,ok})=>`<tr data-size="${s.name}" class="${s.name===szName?"sel":""}"><td>${s.name}${s.name.endsWith("mm")?"":"sq"}</td><td class="num">${fmt(x.e,dv)}</td><td class="num">${fmt(x.pct,2)}%</td>${hvT?`<td class="num${sc?(sc.ok?"":" ng"):""}">${sc?fmt(sc.kA,1)+"kA":"—"}</td>`:`<td class="num">${a.none?"—":a.A+"A"}</td>`}<td class="${ok?"ok":"ng"}">${ok?"OK":"NG"}</td></tr>`).join("")+"</tbody>";
+  $("sizeTable").innerHTML="<thead><tr><th>サイズ</th><th>降下 V</th><th>降下率</th>"+(hvT?"<th>許容電流</th><th>短絡耐量</th>":"<th>許容電流</th>")+"<th>判定</th></tr></thead><tbody>"+
+    rows.map(({s,x,a,sc,ok})=>`<tr data-size="${s.name}" class="${s.name===szName?"sel":""}"><td>${s.name}${s.name.endsWith("mm")?"":"sq"}</td><td class="num">${fmt(x.e,dv)}</td><td class="num">${fmt(x.pct,2)}%</td>${hvT?`<td class="num${a&&!a.none&&!ampOk(a,o.need)?" ng":""}">${a&&!a.none?a.A+"A":"—"}</td><td class="num${sc?(sc.ok?"":" ng"):""}">${sc?fmt(sc.kA,1)+"kA":"—"}</td>`:`<td class="num">${a.none?"—":a.A+"A"}</td>`}<td class="${ok?"ok":"ng"}">${ok?"OK":"NG"}</td></tr>`).join("")+"</tbody>";
   let basis;
   if(mode==="simple")basis="簡易式 e = "+SYSTEMS[o.sys].kS+" × L × I ÷ (1000 × A)。基準電圧 "+SYSTEMS[o.sys].base+"V";
   else{
@@ -639,6 +653,7 @@ function compute(){
     const ex=sz?rx(type,sz,o):(!ms.none?rx(ms.type,ms.sz,o):null);
     basis="正式式 e = "+k+" × I × L × (R cosθ + X sinθ)。力率 "+o.pf+"、"+o.freq+"Hz、導体 "+(ex?ex.t:"")+"℃"+(ex?"、R = "+fmt(ex.R,4)+" Ω/km、X = "+fmt(ex.X,4)+" Ω/km（"+(sz?sz.name:ms.sz.name)+"）":"");
   }
+  if(hvT)basis+="。許容電流は 6.6kV CVT（トリプレックス）気中・暗きょ"+(o.amb==="base"||o.amb==null?40:o.amb)+"℃の値（内線規程 資料1-3-3、JCS 0168-2）";
   if(hvT)basis+="。短絡強度は A ≧ Is × √t ÷ "+SC_K+"（CV・CVT、導体90℃→短絡時230℃）"+(o.isc>0?"、Is = "+fmt(o.isc,1)+"kA、t = "+o.ts+"秒":"");
   if(!hvT){const a0=ampFor(type,listOf(type)[0].name,o);basis+="。許容電流は "+condLabel(type,o,a0)+(type==="VVF"?"（IV電線の値×電流減少係数 "+WIRES[o.wires].f+"）":"（JCS 0168-2、1条布設）");}
   $("basis").textContent=basis;
