@@ -300,12 +300,14 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
       <button class="btn sub" id="btnCopyTsv">Excel用にコピー</button>
       <button class="btn sub" id="btnCopyText">報告文をコピー</button>
       <a class="btn line" id="lineAll" target="_blank" rel="noopener">全件をLINEで送る</a>
+      <button class="btn sub" id="btnPdf" hidden>計算書をPDFで共有</button>
     </div>
     <textarea class="copybox" id="copyBox" readonly hidden></textarea>
     <div id="histList"></div>
     <button class="btn danger" id="btnClear" hidden>保存した結果をすべて消す</button>
   </section>
 
+  <button class="btn sub" id="btnAppInfo" hidden>購入・利用規約・このアプリについて</button>
   <p class="foot">試作版 v0.9。許容電流は、CV・CVTがJCS 0168-2（周囲40℃、1条布設）、VVFが内線規程の考え方（IV×電流減少係数、周囲30℃）です。高圧は電圧降下・許容電流（6.6kV CVT 気中・暗きょ40℃）・短絡時の熱的強度（CV・CVT、導体90℃→短絡時230℃、A ≧ Is√t ÷ 134）の3つがOKで「使用可」です。ケーブルラックに多条で並べる場合の低減、地中管路・直埋、高圧の地中管路・直埋の許容電流はまだ入っていません。ケーブルの抵抗・リアクタンスと短絡の係数は、メーカー・業界団体の資料で確認した値です（下の「計算の根拠と出典」）。保存した結果はこの端末のこのブラウザにだけ残ります。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -483,11 +485,17 @@ const $=id=>document.getElementById(id);
 const DEF={mode:"formal",lvf:"formal",sys:"3p3w200",I:"50",L:"80",type:"CV",size:"",inst:"air",wires:"3",amb:"base",pf:0.9,allow:2,freq:60,temp:"auto",
   load:"power",im:"",am:"rule",rseg:"main",rsup:"lv",far:"",other:"2",hvIn:"kva",hvLoad:"500",hvL:"1200",hvSize:"",hvAllow:2,hvPf:0.9,hvIsc:"12.5",hvTs:0.2,site:"",circuit:""};
 let st={...DEF}, saved=[], firstRun=true;
+// iPhoneアプリ（WKWebView）から開いたときだけ使う橋渡し。Webでは何もしない
+const NATIVE=!!(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.app);
+const toNative=m=>{try{window.webkit.messageHandlers.app.postMessage(m)}catch(e){}};
+// アプリの購入状態。native が window.APP_LICENSE を入れる。{unlocked:true/false}
+const locked=()=>NATIVE&&!!window.APP_LICENSE&&!window.APP_LICENSE.unlocked;
+const isPaidMode=p=>p.mode==="hv"||p.mode==="formal";
 const store={
   get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 };
-(function load(){const s=store.get("vd.state");if(s){st={...DEF,...s};firstRun=false}saved=store.get("vd.saved")||[]})();
+(function load(){const s=store.get("vd.state");if(s){st={...DEF,...s};firstRun=false}saved=store.get("vd.saved")||[];if(locked()&&isPaidMode(st))st.mode="simple";})();
 
 const fmt=(x,d)=>Number.isFinite(x)?x.toFixed(d):"--";
 const numIn=v=>{const n=parseFloat(String(v).replace(/[，,]/g,"").replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)));return Number.isFinite(n)&&n>0?n:NaN};
@@ -670,7 +678,7 @@ function condLabel(type,o,a){
   const th=a&&a.th!=null?a.th:(o.amb==="base"?(type==="VVF"?30:40):o.amb);
   return (type==="VVF"?"VVF・同一管内"+WIRES[o.wires].label:AMP_COL[a?a.col:type]+"・"+INST[o.inst])+"・"+th+"℃";
 }
-function set(p){Object.assign(st,p);firstRun=false;store.set("vd.state",st);renderControls();compute();}
+function set(p){if(p.mode&&isPaidMode(p)&&locked()){toNative({type:"paywall"});return;}Object.assign(st,p);firstRun=false;store.set("vd.state",st);renderControls();compute();}
 
 // inputs
 document.querySelectorAll(".modes button").forEach(b=>b.addEventListener("click",()=>set({mode:b.dataset.mode==="hv"?"hv":(st.lvf||"formal")})));
@@ -709,6 +717,7 @@ $("inCircuit").addEventListener("input",e=>{st.circuit=e.target.value;store.set(
 const MODE_LABEL={simple:"低圧簡易",formal:"低圧正式",hv:"高圧6.6kV"};
 function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2200);}
 $("btnSave").addEventListener("click",()=>{
+  if(locked()){toNative({type:"paywall"});return;}
   if(!last){toast("電流とこう長を入れてから保存してください");return;}
   const {o,type,mode,sz,r,ms,minLabel}=last, hv=mode==="hv";
   const d=new Date(), pad=n=>String(n).padStart(2,"0");
@@ -743,6 +752,7 @@ function recText(x){
 }
 async function copy(text,what){
   const box=$("copyBox");
+  if(NATIVE){toNative({type:"copy",text});box.hidden=true;toast(what+"をコピーしました");return;}
   try{await navigator.clipboard.writeText(text);box.hidden=true;toast(what+"をコピーしました");}
   catch(e){box.hidden=false;box.value=text;box.focus();box.select();toast("自動コピーできないので、下の枠を長押ししてコピーしてください");}
 }
@@ -755,6 +765,21 @@ $("btnCopyText").addEventListener("click",()=>{
   if(!saved.length){toast("保存した結果がありません");return;}
   copy(saved.map(recText).join("\n\n"),saved.length+"件の報告文");
 });
+// 計算書（PDF用のHTML）。iPhoneアプリで A4 の PDF にして共有する
+const esc=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function reportHtml(list){
+  const rows=[["現場名","site"],["回路名","circuit"],["計算方式","mode"],["配電方式","sys"],["電圧","volt"],["負荷容量","load"],["電流 A","current"],["負荷の種類","loadKind"],["必要許容電流 A","need"],["こう長 m","L"],["ケーブル","cable"],["サイズ","size"],["力率","pf"],["周波数 Hz","freq"],["導体温度 ℃","temp"],["許容降下 %","allow"],["許容値の根拠","std"],["電圧降下 V","e"],["降下率 %","pct"],["布設条件","inst"],["許容電流 A","amp"],["短絡電流 kA","isc"],["遮断時間 s","ts"],["短絡耐量 kA","scKA"],["判定","judge"],["条件を満たす最小サイズ","minSize"]];
+  const one=x=>`<h2>${esc(x.site||"現場名なし")}${x.circuit?"／"+esc(x.circuit):""}<span>${esc(x.date)}</span></h2><table>`+
+    rows.filter(([,k])=>x[k]!==""&&x[k]!=null).map(([l,k])=>`<tr><th>${l}</th><td${k==="judge"?` class="${String(x[k]).startsWith("OK")?"ok":"ng"}"`:""}>${esc(x[k])}</td></tr>`).join("")+"</table>";
+  return `<html><head><meta charset="utf-8"><style>body{font-family:-apple-system,"Hiragino Sans",sans-serif;font-size:10pt;color:#111}h1{font-size:15pt;margin:0 0 4pt}h2{font-size:11.5pt;margin:14pt 0 4pt;border-bottom:1px solid #999}h2 span{float:right;font-weight:normal;font-size:9pt}table{width:100%;border-collapse:collapse;page-break-inside:avoid}th,td{border:1px solid #bbb;padding:2pt 5pt;text-align:left;vertical-align:top}th{width:32%;background:#f2f2f2;font-weight:normal}.ok{color:#11602f;font-weight:bold}.ng{color:#a11;font-weight:bold}.note{font-size:8pt;color:#555;margin-top:14pt}</style></head><body>
+<h1>電圧降下・ケーブル選定 計算書</h1><div>${list.length}件</div>${list.map(one).join("")}
+<p class="note">計算: 電圧降下 e = K・I・L・(R cosθ + X sinθ)、許容電流は JCS 0168-2・内線規程 資料1-3-3、許容降下は内線規程1310-1、短絡強度は A ≧ Is√t÷134。本計算書は設計の目安です。最終判断は設計者が内線規程・メーカー資料で確認してください。</p></body></html>`;
+}
+$("btnPdf").hidden=!NATIVE;
+$("btnAppInfo").hidden=!NATIVE;$("btnAppInfo").addEventListener("click",()=>toNative({type:"settings"}));
+$("btnPdf").addEventListener("click",()=>{if(!saved.length){toast("保存した結果がありません");return;}toNative({type:"pdf",html:reportHtml(saved),name:"電圧降下計算書"});});
+// native が購入状態を更新したときに呼ぶ
+window.onLicense=lic=>{window.APP_LICENSE=lic;if(locked()&&isPaidMode(st)){st.mode="simple";store.set("vd.state",st);}renderControls();compute();};
 let clearArmed=false;
 $("btnClear").addEventListener("click",()=>{
   if(!clearArmed){clearArmed=true;$("btnClear").textContent="もう一度押すと全件消えます";setTimeout(()=>{clearArmed=false;$("btnClear").textContent="保存した結果をすべて消す"},4000);return;}
